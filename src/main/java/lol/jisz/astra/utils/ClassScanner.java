@@ -9,6 +9,7 @@ import lol.jisz.astra.command.CommandBase;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -183,18 +184,31 @@ public class ClassScanner {
 
         if (protocol.equals("jar")) {
             String jarPath = resource.getPath().substring(5, resource.getPath().indexOf("!"));
-            try (JarFile jar = new JarFile(new File(new URL(jarPath).toURI()))) {
-                Enumeration<JarEntry> entries = jar.entries();
-                while (entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-                    String name = entry.getName();
-                    if (name.startsWith(path) && name.endsWith(".class")) {
-                        String className = name.substring(0, name.length() - 6).replace('/', '.');
-                        classes.add(Class.forName(className));
+            try {
+                URL jarUrl;
+                try {
+                    jarUrl = new URL(jarPath);
+                } catch (MalformedURLException e) {
+                    File jarFile = new File(jarPath);
+                    jarUrl = jarFile.toURI().toURL();
+                }
+
+                try (JarFile jar = new JarFile(new File(jarUrl.toURI()))) {
+                    Enumeration<JarEntry> entries = jar.entries();
+                    while (entries.hasMoreElements()) {
+                        JarEntry entry = entries.nextElement();
+                        String name = entry.getName();
+                        if (name.startsWith(path) && name.endsWith(".class")) {
+                            String className = name.substring(0, name.length() - 6).replace('/', '.');
+                            classes.add(Class.forName(className));
+                        }
                     }
+                } catch (Exception e) {
+                    plugin.logger().error("Error scanning JAR", e);
+                    plugin.logger().info("Cause: " + e.getMessage());
                 }
             } catch (Exception e) {
-                plugin.logger().error("Error scanning JAR", e);
+                plugin.logger().error("Error processing JAR URL", e);
             }
         } else if (protocol.equals("file")) {
             File directory = new File(resource.getFile());
