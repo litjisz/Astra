@@ -135,7 +135,7 @@ public class CommandManager {
         }
         return false;
     }
-    
+
     /**
      * Gets the plugin associated with the command manager
      * @return Plugin instance

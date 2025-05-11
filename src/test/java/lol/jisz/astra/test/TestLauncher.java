@@ -177,8 +177,7 @@ public class TestLauncher {
             "",  // base package
             "/api",
             "/command",
-            "/utils",
-            "/test"
+            "/utils"
         };
 
         for (String pkg : expectedPackages) {

@@ -31,7 +31,7 @@ public class AstraTestRunner extends Astra {
     
     @Override
     protected String[] getAutoScanPackages() {
-        return new String[]{"lol.jisz.astra", "lol.jisz.astra.test"};
+        return new String[]{"lol.jisz.astra", "test.java.lol.jisz.astra"};
     }
 
     private void runModuleTests() {
