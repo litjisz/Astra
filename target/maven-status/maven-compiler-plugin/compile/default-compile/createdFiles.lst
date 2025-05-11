@@ -1,15 +1,12 @@
 lol\jisz\astra\utils\ClassScanner.class
-lol\jisz\astra\examples\CommandExample.class
 lol\jisz\astra\command\CommandManager.class
 lol\jisz\astra\api\Module.class
 lol\jisz\astra\utils\Text.class
 lol\jisz\astra\utils\Logger.class
-lol\jisz\astra\examples\EconomyExample.class
 lol\jisz\astra\api\Implements.class
 lol\jisz\astra\command\CommandBase.class
 lol\jisz\astra\event\AutoRegisterListener.class
 lol\jisz\astra\api\PluginHelper.class
-lol\jisz\astra\examples\ConfigExample.class
 lol\jisz\astra\api\AbstractModule.class
 lol\jisz\astra\utils\ConfigManager.class
 lol\jisz\astra\Astra.class
