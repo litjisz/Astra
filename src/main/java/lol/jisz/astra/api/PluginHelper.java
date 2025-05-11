@@ -2,11 +2,13 @@ package lol.jisz.astra.api;
 
 import lol.jisz.astra.Astra;
 import lol.jisz.astra.command.CommandManager;
+import lol.jisz.astra.utils.Logger;
 
 public class PluginHelper {
 
     private final Astra plugin;
     private CommandManager commandManager;
+    private final Logger logger;
 
     /**
      * Constructor for the PluginHelper class.
@@ -14,6 +16,15 @@ public class PluginHelper {
      */
     public PluginHelper(Astra plugin) {
         this.plugin = plugin;
+        this.logger = plugin.logger();
+        
+        try {
+            this.commandManager = new CommandManager(plugin);
+        } catch (Exception e) {
+            if (logger != null) {
+                logger.error("Failed to initialize CommandManager", e);
+            }
+        }
     }
 
     /**
@@ -26,9 +37,10 @@ public class PluginHelper {
             initModuleSystem();
             initCommandSystem();
             loadConfig();
+            logger.info("PluginHelper loaded successfully");
 
         } catch (Exception e) {
-            plugin.logger().error("Error loading the plugin", e);
+            logger.error("Error loading the plugin", e);
         }
     }
 
@@ -41,9 +53,10 @@ public class PluginHelper {
         try {
             Implements.disableAll();
             saveConfig();
+            logger.info("PluginHelper unloaded successfully");
 
         } catch (Exception e) {
-            plugin.logger().error("Error unloading the plugin", e);
+            logger.error("Error unloading the plugin", e);
         }
     }
 
@@ -61,9 +74,10 @@ public class PluginHelper {
             loadConfig();
 
             Implements.enableAll();
+            logger.info("PluginHelper reloaded successfully");
 
         } catch (Exception e) {
-            plugin.logger().error("Error reloading the plugin", e);
+            logger.error("Error reloading the plugin", e);
         }
     }
 
@@ -84,7 +98,7 @@ public class PluginHelper {
         try {
             commandManager = new CommandManager(plugin);
         } catch (Exception e) {
-            plugin.logger().error("Error initializing the command system", e);
+            logger.error("Error initializing the command system", e);
         }
     }
 

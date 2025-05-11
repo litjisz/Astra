@@ -1,9 +1,7 @@
 package lol.jisz.astra.command;
 
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
+import lol.jisz.astra.Astra;
+import org.bukkit.command.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +41,29 @@ public abstract class CommandBase implements CommandExecutor, TabCompleter {
     }
 
     /**
+     * Unregisters this command from the command map
+     * @param commandMap The command map to unregister from
+     */
+    public void unregister(CommandMap commandMap) {
+        if (commandMap != null) {
+            try {
+                java.lang.reflect.Field knownCommandsField = commandMap.getClass().getDeclaredField("knownCommands");
+                knownCommandsField.setAccessible(true);
+
+                @SuppressWarnings("unchecked")
+                java.util.Map<String, Command> knownCommands = (java.util.Map<String, Command>) knownCommandsField.get(commandMap);
+
+                knownCommands.remove(getName());
+                for (String alias : getAliases()) {
+                    knownCommands.remove(alias);
+                }
+            } catch (Exception e) {
+                Astra.getInstance().logger().error("Failed to unregister command: " + getName(), e);
+            }
+        }
+    }
+
+    /**
      * Executes the command
      * @param sender Command sender
      * @param label Label used
@@ -54,7 +75,7 @@ public abstract class CommandBase implements CommandExecutor, TabCompleter {
     /**
      * Handles the command execution after checking permissions and player-only restrictions.
      * This method is called by Bukkit when a player executes a command registered to this class.
-     * 
+     *
      * @param sender The entity that executed the command (player, console, etc.)
      * @param command The command that was executed
      * @param label The alias of the command that was used
@@ -81,7 +102,7 @@ public abstract class CommandBase implements CommandExecutor, TabCompleter {
      * This method is called by Bukkit when a player attempts to tab-complete this command.
      * The default implementation returns an empty list. Override this method to provide
      * custom tab completion options.
-     * 
+     *
      * @param sender The entity requesting tab completion
      * @param command The command being tab-completed
      * @param alias The alias being used for the command

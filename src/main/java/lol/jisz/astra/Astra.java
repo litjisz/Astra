@@ -79,11 +79,6 @@ public abstract class Astra extends JavaPlugin {
                 commandManager = pluginHelper.getCommandManager();
                 classScanner = new ClassScanner(this);
 
-                if (commandManager != null) {
-                    registerDefaultCommand();
-                } else {
-                    logger.warning("CommandManager was not initialized correctly. Commands will not be available.");
-                }
             } else {
                 logger.error("PluginHelper could not be initialized.");
             }
@@ -132,19 +127,6 @@ public abstract class Astra extends JavaPlugin {
      */
     public <T extends Module> T registerModule(T module) {
         return Implements.register(module);
-    }
-
-    private void registerDefaultCommand() {
-        try {
-            if (commandManager != null) {
-                CommandBase defaultCommand = new CommandExample();
-                commandManager.registerCommand(defaultCommand);
-            } else {
-                logger.warning("The default command could not be registered because CommandManager is null.");
-            }
-        } catch (Exception e) {
-            logger.error("Error registering the default command", e);
-        }
     }
 
     /**
