@@ -123,6 +123,20 @@ public class CommandManager {
     }
 
     /**
+     * Checks if a command with the given name is registered
+     * @param name Name of the command to check
+     * @return true if a command with that name is registered, false otherwise
+     */
+    public boolean isRegistered(String name) {
+        for (CommandBase command : commands) {
+            if (command.getName().equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
      * Gets the plugin associated with the command manager
      * @return Plugin instance
      */

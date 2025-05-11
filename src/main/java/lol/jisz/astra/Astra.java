@@ -4,7 +4,6 @@ import lol.jisz.astra.api.AutoRegisterModule;
 import lol.jisz.astra.api.Implements;
 import lol.jisz.astra.api.Module;
 import lol.jisz.astra.api.PluginHelper;
-import lol.jisz.astra.examples.CommandExample;
 import lol.jisz.astra.command.AutoRegisterCommand;
 import lol.jisz.astra.command.CommandBase;
 import lol.jisz.astra.command.CommandManager;
