@@ -38,7 +38,6 @@ public abstract class Astra extends JavaPlugin {
             }
 
             initAstra();
-            scanAutoPackages();
 
             if (pluginHelper != null) {
                 pluginHelper.load();
@@ -83,25 +82,6 @@ public abstract class Astra extends JavaPlugin {
             }
         } catch (Exception e) {
             logger.error("Error during Astra initialization", e);
-        }
-    }
-
-    private void scanAutoPackages() {
-        try {
-            if (classScanner != null) {
-                String[] packages = getAutoScanPackages();
-                if (packages != null && packages.length > 0) {
-                    for (String packageName : packages) {
-                        if (packageName != null && !packageName.isEmpty()) {
-                            classScanner.scanPackage(packageName);
-                        }
-                    }
-                }
-            } else {
-                logger.warning("ClassScanner was not initialized correctly. Automatic package scanning will not be available.");
-            }
-        } catch (Exception e) {
-            logger.error("Error during package scanning", e);
         }
     }
 
@@ -213,14 +193,6 @@ public abstract class Astra extends JavaPlugin {
      */
     public Logger logger() {
         return logger;
-    }
-
-    /**
-     * Returns the packages that should be automatically scanned to register modules and commands
-     * @return Array of package names to scan or null if no automatic scanning is desired
-     */
-    protected String[] getAutoScanPackages() {
-        return new String[]{"lol.jisz.astra"};
     }
 
     /**
