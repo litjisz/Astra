@@ -21,6 +21,7 @@ public abstract class Astra extends JavaPlugin {
     private CommandManager commandManager;
     private ClassScanner classScanner;
     private PluginHelper pluginHelper;
+    private boolean initialized = false;
 
     private static Logger logger;
     private static Astra instance;
@@ -31,11 +32,23 @@ public abstract class Astra extends JavaPlugin {
             instance = this;
             logger = new Logger(this);
 
+            if (getResource("config.yml") != null) {
+                saveDefaultConfig();
+            } else {
+                logger.warning("config.yml was not found in the JAR. Default configuration loading will be skipped.");
+            }
+
             initAstra();
             scanAutoPackages();
-            pluginHelper.load();
+
+            if (pluginHelper != null) {
+                pluginHelper.load();
+            } else {
+                logger.error("PluginHelper could not be initialized. Some functionalities may not be available.");
+            }
 
             onInitialize();
+            initialized = true;
 
             logger.info("Plugin enabled successfully!");
         } catch (Exception e) {
@@ -46,7 +59,9 @@ public abstract class Astra extends JavaPlugin {
     @Override
     public void onDisable() {
         try {
-            pluginHelper.unload();
+            if (pluginHelper != null) {
+                pluginHelper.unload();
+            }
             onShutdown();
 
             logger.info("Plugin disabled successfully!");
@@ -56,28 +71,51 @@ public abstract class Astra extends JavaPlugin {
     }
 
     private void initAstra() {
-        Implements.init(this);
-        pluginHelper = new PluginHelper(this);
-        commandManager = pluginHelper.getCommandManager();
-        classScanner = new ClassScanner(this);
-        saveDefaultConfig();
-        registerDefaultCommand();
+        try {
+            Implements.init(this);
+            pluginHelper = new PluginHelper(this);
+
+            if (pluginHelper != null) {
+                commandManager = pluginHelper.getCommandManager();
+                classScanner = new ClassScanner(this);
+
+                if (commandManager != null) {
+                    registerDefaultCommand();
+                } else {
+                    logger.warning("CommandManager was not initialized correctly. Commands will not be available.");
+                }
+            } else {
+                logger.error("PluginHelper could not be initialized.");
+            }
+        } catch (Exception e) {
+            logger.error("Error during Astra initialization", e);
+        }
     }
 
     private void scanAutoPackages() {
-        String[] packages = getAutoScanPackages();
-        if (packages != null && packages.length > 0) {
-            for (String packageName : packages) {
-                if (packageName != null && !packageName.isEmpty()) {
-                    classScanner.scanPackage(packageName);
+        try {
+            if (classScanner != null) {
+                String[] packages = getAutoScanPackages();
+                if (packages != null && packages.length > 0) {
+                    for (String packageName : packages) {
+                        if (packageName != null && !packageName.isEmpty()) {
+                            classScanner.scanPackage(packageName);
+                        }
+                    }
                 }
+            } else {
+                logger.warning("ClassScanner was not initialized correctly. Automatic package scanning will not be available.");
             }
+        } catch (Exception e) {
+            logger.error("Error during package scanning", e);
         }
     }
 
     public void reload() {
         try {
-            pluginHelper.reload();
+            if (pluginHelper != null) {
+                pluginHelper.reload();
+            }
             onReload();
 
             logger.info("Plugin reloaded successfully!");
@@ -97,8 +135,16 @@ public abstract class Astra extends JavaPlugin {
     }
 
     private void registerDefaultCommand() {
-        CommandBase defaultCommand = new CommandExample();
-        commandManager.registerCommand(defaultCommand);
+        try {
+            if (commandManager != null) {
+                CommandBase defaultCommand = new CommandExample();
+                commandManager.registerCommand(defaultCommand);
+            } else {
+                logger.warning("The default command could not be registered because CommandManager is null.");
+            }
+        } catch (Exception e) {
+            logger.error("Error registering the default command", e);
+        }
     }
 
     /**
@@ -106,7 +152,11 @@ public abstract class Astra extends JavaPlugin {
      * @param command Command to register
      */
     public void registerCommand(CommandBase command) {
-        commandManager.registerCommand(command);
+        if (commandManager != null) {
+            commandManager.registerCommand(command);
+        } else {
+            logger.warning("The command could not be registered because CommandManager is null.");
+        }
     }
 
     /**
@@ -114,7 +164,11 @@ public abstract class Astra extends JavaPlugin {
      * @param command Name of the command to remove
      */
     public void unregisterCommand(CommandBase command) {
-        commandManager.unregisterCommand(command);
+        if (commandManager != null) {
+            commandManager.unregisterCommand(command);
+        } else {
+            logger.warning("The command could not be removed because CommandManager is null.");
+        }
     }
 
     /**
@@ -129,7 +183,8 @@ public abstract class Astra extends JavaPlugin {
                 Implements.register((Module) clazz.getDeclaredConstructor().newInstance());
                 return true;
             } else if (CommandBase.class.isAssignableFrom(clazz) &&
-                    clazz.isAnnotationPresent(AutoRegisterCommand.class)) {
+                    clazz.isAnnotationPresent(AutoRegisterCommand.class) &&
+                    commandManager != null) {
                 commandManager.registerCommand((CommandBase) clazz.getDeclaredConstructor().newInstance());
                 return true;
             }
@@ -173,7 +228,6 @@ public abstract class Astra extends JavaPlugin {
 
     /**
      * Provides access to the plugin's logger instance for logging messages.
-     * 
      * @return The logger instance for this plugin
      */
     public Logger logger() {
@@ -193,8 +247,10 @@ public abstract class Astra extends JavaPlugin {
      * @param packageName Name of the package to scan
      */
     public void scanPackage(String packageName) {
-        if (packageName != null && !packageName.isEmpty()) {
+        if (packageName != null && !packageName.isEmpty() && classScanner != null) {
             classScanner.scanPackage(packageName);
+        } else if (classScanner == null) {
+            logger.warning("The package could not be scanned because ClassScanner is null.");
         }
     }
 
@@ -218,4 +274,12 @@ public abstract class Astra extends JavaPlugin {
      * It is called after the PluginHelper has been reloaded but before the reload completion message.
      */
     protected abstract void onReload();
+
+    /**
+     * Checks if the plugin was successfully initialized
+     * @return true if the plugin was initialized, false otherwise
+     */
+    public boolean isInitialized() {
+        return initialized;
+    }
 }
