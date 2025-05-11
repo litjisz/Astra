@@ -5,22 +5,18 @@ import lol.jisz.astra.api.AutoRegisterModule;
 import lol.jisz.astra.api.Implements;
 import lol.jisz.astra.command.AutoRegisterCommand;
 import lol.jisz.astra.command.CommandBase;
+import org.reflections.Reflections;
+import org.reflections.scanners.Scanners;
 
-import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
+import java.util.Set;
 
 /**
  * A utility class for scanning and automatically registering modules and commands.
- * This class searches through packages to find classes annotated with specific
+ * This class uses the Reflections library to find classes annotated with specific
  * annotations and registers them with the plugin.
  */
 public class ClassScanner {
@@ -45,9 +41,9 @@ public class ClassScanner {
      */
     public void scanPackage(String packageName) {
         try {
-            List<Class<?>> classes = getClasses(packageName);
-            registerModules(classes);
-            registerCommands(classes);
+            Reflections reflections = new Reflections(packageName, Scanners.TypesAnnotated, Scanners.SubTypes);
+            registerModules(reflections);
+            registerCommands(reflections);
         } catch (Exception e) {
             plugin.logger().error("Error scanning package: " + packageName, e);
         }
@@ -61,27 +57,27 @@ public class ClassScanner {
      * 3. Are not interfaces or abstract classes
      * Then sorts them by priority and registers them with the plugin.
      * 
-     * @param classes List of classes to search for modules
+     * @param reflections Reflections instance to search for modules
      */
-    private void registerModules(List<Class<?>> classes) {
-        List<Class<?>> moduleClasses = new ArrayList<>();
+    private void registerModules(Reflections reflections) {
+        Set<Class<?>> moduleClasses = reflections.getTypesAnnotatedWith(AutoRegisterModule.class);
+        List<Class<?>> filteredModules = new ArrayList<>();
 
-        for (Class<?> clazz : classes) {
-            if (Module.class.isAssignableFrom(clazz) &&
-                    clazz.isAnnotationPresent(AutoRegisterModule.class) &&
+        for (Class<?> clazz : moduleClasses) {
+            if (lol.jisz.astra.api.Module.class.isAssignableFrom(clazz) &&
                     !clazz.isInterface() &&
                     !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers())) {
-                moduleClasses.add(clazz);
+                filteredModules.add(clazz);
             }
         }
 
-        moduleClasses.sort((c1, c2) -> {
+        filteredModules.sort((c1, c2) -> {
             AutoRegisterModule a1 = c1.getAnnotation(AutoRegisterModule.class);
             AutoRegisterModule a2 = c2.getAnnotation(AutoRegisterModule.class);
             return Integer.compare(a2.priority(), a1.priority());
         });
 
-        for (Class<?> clazz : moduleClasses) {
+        for (Class<?> clazz : filteredModules) {
             try {
                 Constructor<?> constructor = null;
 
@@ -110,12 +106,13 @@ public class ClassScanner {
      * 3. Are not interfaces or abstract classes
      * Then instantiates and registers them with the plugin's command manager.
      * 
-     * @param classes List of classes to search for commands
+     * @param reflections Reflections instance to search for commands
      */
-    private void registerCommands(List<Class<?>> classes) {
-        for (Class<?> clazz : classes) {
+    private void registerCommands(Reflections reflections) {
+        Set<Class<?>> commandClasses = reflections.getTypesAnnotatedWith(AutoRegisterCommand.class);
+
+        for (Class<?> clazz : commandClasses) {
             if (CommandBase.class.isAssignableFrom(clazz) &&
-                    clazz.isAnnotationPresent(AutoRegisterCommand.class) &&
                     !clazz.isInterface() &&
                     !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers())) {
 
@@ -152,84 +149,5 @@ public class ClassScanner {
                 }
             }
         }
-    }
-
-    /**
-     * Retrieves all classes from a package.
-     * This method scans the specified package and all its subpackages to find
-     * all class files, then loads them into Class objects.
-     * It supports both JAR files and directory-based class files.
-     * 
-     * @param packageName The fully qualified name of the package to scan
-     * @return A list of Class objects found in the package
-     * @throws ClassNotFoundException If a class cannot be loaded
-     * @throws IOException If there is an error reading the package resources
-     */
-    private List<Class<?>> getClasses(String packageName) throws ClassNotFoundException, IOException {
-        List<Class<?>> classes = new ArrayList<>();
-        String path = packageName.replace('.', '/');
-
-        Enumeration<URL> resources = plugin.getClass().getClassLoader().getResources(path);
-
-        URL resource = null;
-        if (resources.hasMoreElements()) {
-            resource = resources.nextElement();
-        }
-
-        if (resource == null) {
-            return classes;
-        }
-
-        String protocol = resource.getProtocol();
-
-        if (protocol.equals("jar")) {
-            String jarPath = resource.getPath().substring(5, resource.getPath().indexOf("!"));
-            try {
-                URL jarUrl;
-                try {
-                    jarUrl = new URL(jarPath);
-                } catch (MalformedURLException e) {
-                    File jarFile = new File(jarPath);
-                    jarUrl = jarFile.toURI().toURL();
-                }
-
-                try (JarFile jar = new JarFile(new File(jarUrl.toURI()))) {
-                    Enumeration<JarEntry> entries = jar.entries();
-                    while (entries.hasMoreElements()) {
-                        JarEntry entry = entries.nextElement();
-                        String name = entry.getName();
-                        if (name.startsWith(path) && name.endsWith(".class")) {
-                            String className = name.substring(0, name.length() - 6).replace('/', '.');
-                            classes.add(Class.forName(className));
-                        }
-                    }
-                } catch (Exception e) {
-                    plugin.logger().error("Error scanning JAR", e);
-                    plugin.logger().info("Cause: " + e.getMessage());
-                }
-            } catch (Exception e) {
-                plugin.logger().error("Error processing JAR URL", e);
-            }
-        } else if (protocol.equals("file")) {
-            File directory = new File(resource.getFile());
-            if (directory.exists()) {
-                String[] files = directory.list();
-                if (files != null) {
-                    for (String file : files) {
-                        if (file.endsWith(".class")) {
-                            String className = packageName + '.' + file.substring(0, file.length() - 6);
-                            classes.add(Class.forName(className));
-                        } else {
-                            File subdir = new File(directory, file);
-                            if (subdir.isDirectory()) {
-                                classes.addAll(getClasses(packageName + '.' + file));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return classes;
     }
 }

@@ -108,10 +108,12 @@ public class Logger {
      * @param message Message to send
      */
     public void info(String message) {
-        plugin.getLogger().info(useColors ? Text.stripColor(message) : message);
+        if (!useColors) {
+            plugin.getLogger().info(Text.stripColor(message));
+            return;
+        }
 
-        // Also send to Bukkit console to see colors if available
-        if (useColors && Bukkit.getConsoleSender() != null) {
+        if (Bukkit.getConsoleSender() != null) {
             Bukkit.getConsoleSender().sendMessage(format("&f" + message));
         }
     }
@@ -122,9 +124,12 @@ public class Logger {
      * @param message Message to send
      */
     public void warning(String message) {
-        plugin.getLogger().warning(useColors ? Text.stripColor(message) : message);
+        if (!useColors) {
+            plugin.getLogger().warning(Text.stripColor(message));
+            return;
+        }
 
-        if (useColors && Bukkit.getConsoleSender() != null) {
+        if (Bukkit.getConsoleSender() != null) {
             Bukkit.getConsoleSender().sendMessage(format("&e" + message));
         }
     }
@@ -135,9 +140,12 @@ public class Logger {
      * @param message Message to send
      */
     public void error(String message) {
-        plugin.getLogger().severe(useColors ? Text.stripColor(message) : message);
-
-        if (useColors && Bukkit.getConsoleSender() != null) {
+        if (!useColors) {
+            plugin.getLogger().severe(Text.stripColor(message));
+            return;
+        }
+        
+        if (Bukkit.getConsoleSender() != null) {
             Bukkit.getConsoleSender().sendMessage(format("&c" + message));
         }
     }
@@ -149,9 +157,12 @@ public class Logger {
      * @param throwable Associated exception
      */
     public void error(String message, Throwable throwable) {
-        plugin.getLogger().log(Level.SEVERE, useColors ? Text.stripColor(message) : message, throwable);
+        if (!useColors) {
+            plugin.getLogger().log(Level.SEVERE, Text.stripColor(message), throwable);
+            return;
+        }
 
-        if (useColors && Bukkit.getConsoleSender() != null) {
+        if (Bukkit.getConsoleSender() != null) {
             Bukkit.getConsoleSender().sendMessage(format("&c" + message));
             Bukkit.getConsoleSender().sendMessage(format("&7Cause: &c" + throwable.getMessage()));
 
@@ -163,6 +174,8 @@ public class Logger {
                         .forEach(element -> Bukkit.getConsoleSender().sendMessage(
                                 format("&8  at &7" + element.toString())));
             }
+        } else {
+            plugin.getLogger().log(Level.SEVERE, Text.stripColor(message), throwable);
         }
     }
 
@@ -187,9 +200,12 @@ public class Logger {
      * @param message Message to send
      */
     public void success(String message) {
-        plugin.getLogger().info(useColors ? Text.stripColor(message) : message);
-
-        if (useColors && Bukkit.getConsoleSender() != null) {
+        if (!useColors) {
+            plugin.getLogger().info(Text.stripColor(message));
+            return;
+        }
+        
+        if (Bukkit.getConsoleSender() != null) {
             Bukkit.getConsoleSender().sendMessage(format("&a" + message));
         }
     }
