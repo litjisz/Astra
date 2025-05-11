@@ -5,17 +5,21 @@ import lol.jisz.astra.api.AutoRegisterModule;
 import lol.jisz.astra.api.Implements;
 import lol.jisz.astra.command.AutoRegisterCommand;
 import lol.jisz.astra.command.CommandBase;
+import lol.jisz.astra.event.AutoRegisterListener;
+import org.bukkit.event.Listener;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * A utility class for scanning and automatically registering modules and commands.
+ * A utility class for scanning and automatically registering modules, commands, and listeners.
  * This class uses the Reflections library to find classes annotated with specific
  * annotations and registers them with the plugin.
  */
@@ -25,7 +29,7 @@ public class ClassScanner {
 
     /**
      * Constructs a new ClassScanner instance.
-     * 
+     *
      * @param plugin The Astra plugin instance that will be used for registration and logging
      */
     public ClassScanner(Astra plugin) {
@@ -33,10 +37,10 @@ public class ClassScanner {
     }
 
     /**
-     * Scans a package to automatically register commands and modules.
+     * Scans a package to automatically register commands, modules, and listeners.
      * This method finds all classes in the specified package, then identifies
-     * and registers those that are annotated as auto-registerable modules or commands.
-     * 
+     * and registers those that are annotated with the appropriate annotations.
+     *
      * @param packageName The fully qualified name of the package to scan
      */
     public void scanPackage(String packageName) {
@@ -44,6 +48,7 @@ public class ClassScanner {
             Reflections reflections = new Reflections(packageName, Scanners.TypesAnnotated, Scanners.SubTypes);
             registerModules(reflections);
             registerCommands(reflections);
+            registerListeners(reflections);
         } catch (Exception e) {
             plugin.logger().error("Error scanning package: " + packageName, e);
         }
@@ -56,7 +61,7 @@ public class ClassScanner {
      * 2. Are annotated with @AutoRegisterModule
      * 3. Are not interfaces or abstract classes
      * Then sorts them by priority and registers them with the plugin.
-     * 
+     *
      * @param reflections Reflections instance to search for modules
      */
     private void registerModules(Reflections reflections) {
@@ -105,7 +110,7 @@ public class ClassScanner {
      * 2. Are annotated with @AutoRegisterCommand
      * 3. Are not interfaces or abstract classes
      * Then instantiates and registers them with the plugin's command manager.
-     * 
+     *
      * @param reflections Reflections instance to search for commands
      */
     private void registerCommands(Reflections reflections) {
@@ -147,6 +152,54 @@ public class ClassScanner {
                 } catch (Exception e) {
                     plugin.logger().error("Could not register the command: " + clazz.getName(), e);
                 }
+            }
+        }
+    }
+
+    /**
+     * Automatically registers the found event listeners.
+     * This method filters the provided classes to find those that:
+     * 1. Implement Listener
+     * 2. Are annotated with @AutoRegisterListener
+     * 3. Are not interfaces or abstract classes
+     * Then instantiates and registers them with the plugin's event manager.
+     *
+     * @param reflections Reflections instance to search for listeners
+     */
+    private void registerListeners(Reflections reflections) {
+        Set<Class<?>> listenerClasses = reflections.getTypesAnnotatedWith(AutoRegisterListener.class);
+        List<Class<?>> filteredListeners = listenerClasses.stream()
+                .filter(clazz -> Listener.class.isAssignableFrom(clazz) &&
+                        !clazz.isInterface() &&
+                        !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers()))
+                .sorted(Comparator.comparing(clazz ->
+                        -clazz.getAnnotation(AutoRegisterListener.class).priority()))
+                .collect(Collectors.toList());
+
+        for (Class<?> clazz : filteredListeners) {
+            try {
+                Constructor<?> constructor = null;
+                Listener listener = null;
+
+                try {
+                    constructor = clazz.getConstructor(Astra.class);
+                    listener = (Listener) constructor.newInstance(plugin);
+                } catch (NoSuchMethodException e1) {
+                    try {
+                        constructor = clazz.getConstructor();
+                        listener = (Listener) constructor.newInstance();
+                    } catch (Exception e2) {
+                        plugin.logger().error("Could not find a suitable constructor for listener: " + clazz.getName());
+                        continue;
+                    }
+                }
+
+                if (listener != null) {
+                    plugin.getServer().getPluginManager().registerEvents(listener, plugin);
+                    plugin.logger().info("Listener automatically registered: " + clazz.getSimpleName());
+                }
+            } catch (Exception e) {
+                plugin.logger().error("Could not register the listener: " + clazz.getName(), e);
             }
         }
     }

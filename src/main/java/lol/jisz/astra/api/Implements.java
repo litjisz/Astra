@@ -30,6 +30,7 @@ public class Implements {
     @SuppressWarnings("all")
     public static <T extends Module> T register(T module) {
         modules.put(module.getClass(), module);
+        module.enable();
         return module;
     }
 
