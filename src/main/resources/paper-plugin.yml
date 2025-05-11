@@ -1,0 +1,5 @@
+name: Astra
+version: '1.0-SNAPSHOT'
+main: lol.jisz.astra.Astra
+api-version: '1.21'
+authors: [ litjisz ]

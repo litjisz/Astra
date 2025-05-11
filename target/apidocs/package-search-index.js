@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"lol.jisz.astra"},{"l":"lol.jisz.astra.api"},{"l":"lol.jisz.astra.command"},{"l":"lol.jisz.astra.examples"},{"l":"lol.jisz.astra.utils"}];updateSearchResults();
