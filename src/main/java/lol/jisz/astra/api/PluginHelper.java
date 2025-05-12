@@ -2,6 +2,7 @@ package lol.jisz.astra.api;
 
 import lol.jisz.astra.Astra;
 import lol.jisz.astra.command.CommandManager;
+import lol.jisz.astra.task.TaskManager;
 import lol.jisz.astra.utils.Logger;
 
 public class PluginHelper {
@@ -36,6 +37,7 @@ public class PluginHelper {
         try {
             initModuleSystem();
             initCommandSystem();
+            initTaskSystem();
             loadConfig();
             logger.info("PluginHelper loaded successfully");
 
@@ -100,6 +102,14 @@ public class PluginHelper {
         } catch (Exception e) {
             logger.error("Error initializing the command system", e);
         }
+    }
+
+    /**
+     * Initializes the task system by registering the TaskManager.
+     * This is a private helper method called during the load process.
+     */
+    private void initTaskSystem() {
+        Implements.register(new TaskManager());
     }
 
     /**

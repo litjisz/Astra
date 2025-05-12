@@ -6,6 +6,7 @@ import lol.jisz.astra.api.Implements;
 import lol.jisz.astra.command.AutoRegisterCommand;
 import lol.jisz.astra.command.CommandBase;
 import lol.jisz.astra.event.AutoRegisterListener;
+import lol.jisz.astra.task.*;
 import org.bukkit.event.Listener;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
@@ -49,6 +50,7 @@ public class ClassScanner {
             registerModules(reflections);
             registerCommands(reflections);
             registerListeners(reflections);
+            registerTasks(reflections);
         } catch (Exception e) {
             plugin.logger().error("Error scanning package: " + packageName, e);
         }
@@ -200,6 +202,121 @@ public class ClassScanner {
                 }
             } catch (Exception e) {
                 plugin.logger().error("Could not register the listener: " + clazz.getName(), e);
+            }
+        }
+    }
+
+    /**
+     * Automatically registers the found tasks.
+     * This method filters the provided classes to find those that:
+     * 1. Implement Runnable or extend AbstractAstraTask
+     * 2. Are annotated with @AutoRegisterTask
+     * 3. Are not interfaces or abstract classes
+     * Then instantiates and registers them with the plugin's task manager.
+     *
+     * @param reflections Reflections instance to search for tasks
+     */
+    private void registerTasks(Reflections reflections) {
+        Set<Class<?>> taskClasses = reflections.getTypesAnnotatedWith(AutoRegisterTask.class);
+        List<Class<?>> filteredTasks = taskClasses.stream()
+                .filter(clazz -> (Runnable.class.isAssignableFrom(clazz) || 
+                                 AbstractAstraTask.class.isAssignableFrom(clazz)) &&
+                        !clazz.isInterface() &&
+                        !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers()))
+                .collect(Collectors.toList());
+
+        for (Class<?> clazz : filteredTasks) {
+            try {
+                AutoRegisterTask annotation = clazz.getAnnotation(AutoRegisterTask.class);
+                
+                String id = annotation.id().isEmpty() ?
+                    clazz.getSimpleName() + "-" + java.util.UUID.randomUUID().toString().substring(0, 8) : 
+                    annotation.id();
+                TaskPriority priority = annotation.priority();
+                boolean isAsync = annotation.async();
+                long delay = annotation.delay();
+                long period = annotation.period();
+                String[] dependencies = annotation.dependencies();
+                boolean executeOnStartup = annotation.executeOnStartup();
+                
+                Object taskInstance = null;
+                AstraTask task = null;
+                
+                if (AbstractAstraTask.class.isAssignableFrom(clazz)) {
+                    try {
+                        Constructor<?> constructor = clazz.getConstructor(Astra.class);
+                        taskInstance = constructor.newInstance(plugin);
+                    } catch (NoSuchMethodException e1) {
+                        try {
+                            Constructor<?> constructor = clazz.getConstructor();
+                            taskInstance = constructor.newInstance();
+                        } catch (Exception e2) {
+                            plugin.logger().error("Could not find a suitable constructor for task: " + clazz.getName());
+                            continue;
+                        }
+                    }
+                    
+                    task = (AstraTask) taskInstance;
+                } else if (Runnable.class.isAssignableFrom(clazz)) {
+                    Runnable runnable = null;
+                    
+                    try {
+                        Constructor<?> constructor = clazz.getConstructor(Astra.class);
+                        runnable = (Runnable) constructor.newInstance(plugin);
+                    } catch (NoSuchMethodException e1) {
+                        try {
+                            Constructor<?> constructor = clazz.getConstructor();
+                            runnable = (Runnable) constructor.newInstance();
+                        } catch (Exception e2) {
+                            plugin.logger().error("Could not find a suitable constructor for task: " + clazz.getName());
+                            continue;
+                        }
+                    }
+                    
+                    if (isAsync) {
+                        task = Implements.fetch(TaskManager.class).createAsyncTask(id, runnable);
+                    } else {
+                        task = Implements.fetch(TaskManager.class).createSyncTask(id, runnable);
+                    }
+                }
+                
+                if (task != null) {
+                    task.setPriority(priority);
+                    
+                    for (String dependency : dependencies) {
+                        if (!dependency.isEmpty()) {
+                            task.addDependency(dependency);
+                        }
+                    }
+                    
+                    Implements.fetch(TaskManager.class).registerTask(task);
+                    
+                    if (executeOnStartup) {
+                        if (period > 0) {
+                            if (isAsync) {
+                                ((AsyncAstraTask)task).executeRepeating(delay, period);
+                            } else {
+                                ((SyncAstraTask)task).executeRepeating(delay, period);
+                            }
+                        } else if (delay > 0) {
+                            if (isAsync) {
+                                ((AsyncAstraTask)task).executeDelayed(delay);
+                            } else {
+                                ((SyncAstraTask)task).executeDelayed(delay);
+                            }
+                        } else {
+                            if (isAsync) {
+                                ((AsyncAstraTask)task).execute();
+                            } else {
+                                ((SyncAstraTask)task).execute();
+                            }
+                        }
+                    }
+
+                    plugin.logger().info("Task automatically registered: " + clazz.getSimpleName() + " (ID: " + id + ")");
+                }
+            } catch (Exception e) {
+                plugin.logger().error("Could not register the task: " + clazz.getName(), e);
             }
         }
     }
