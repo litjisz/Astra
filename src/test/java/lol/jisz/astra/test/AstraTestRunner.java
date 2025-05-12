@@ -28,11 +28,6 @@ public class AstraTestRunner extends Astra {
     protected void onReload() {
         logger().info(TEST_PREFIX + "Recargando pruebas de Astra.");
     }
-    
-    @Override
-    protected String[] getAutoScanPackages() {
-        return new String[]{"lol.jisz.astra", "test.java.lol.jisz.astra"};
-    }
 
     private void runModuleTests() {
         logger().info(TEST_PREFIX + "Ejecutando pruebas de módulos...");
