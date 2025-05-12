@@ -6,7 +6,10 @@ import lol.jisz.astra.api.Implements;
 import lol.jisz.astra.command.AutoRegisterCommand;
 import lol.jisz.astra.command.CommandBase;
 import lol.jisz.astra.event.AutoRegisterListener;
-import lol.jisz.astra.task.*;
+import lol.jisz.astra.task.AutoRegisterTask;
+import lol.jisz.astra.task.AsyncAstraTask;
+import lol.jisz.astra.task.SyncAstraTask;
+import lol.jisz.astra.task.TaskPriority;
 import org.bukkit.event.Listener;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
@@ -38,7 +41,7 @@ public class ClassScanner {
     }
 
     /**
-     * Scans a package to automatically register commands, modules, and listeners.
+     * Scans a package to automatically register commands, modules, listeners, and tasks.
      * This method finds all classes in the specified package, then identifies
      * and registers those that are annotated with the appropriate annotations.
      *
@@ -209,114 +212,84 @@ public class ClassScanner {
     /**
      * Automatically registers the found tasks.
      * This method filters the provided classes to find those that:
-     * 1. Implement Runnable or extend AbstractAstraTask
-     * 2. Are annotated with @AutoRegisterTask
-     * 3. Are not interfaces or abstract classes
-     * Then instantiates and registers them with the plugin's task manager.
+     * 1. Are annotated with @AutoRegisterTask
+     * 2. Are not interfaces or abstract classes
+     * Then instantiates and registers them with the plugin's task system.
      *
      * @param reflections Reflections instance to search for tasks
      */
     private void registerTasks(Reflections reflections) {
         Set<Class<?>> taskClasses = reflections.getTypesAnnotatedWith(AutoRegisterTask.class);
-        List<Class<?>> filteredTasks = taskClasses.stream()
-                .filter(clazz -> (Runnable.class.isAssignableFrom(clazz) || 
-                                 AbstractAstraTask.class.isAssignableFrom(clazz)) &&
-                        !clazz.isInterface() &&
-                        !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers()))
-                .collect(Collectors.toList());
-
-        for (Class<?> clazz : filteredTasks) {
-            try {
-                AutoRegisterTask annotation = clazz.getAnnotation(AutoRegisterTask.class);
-                
-                String id = annotation.id().isEmpty() ?
-                    clazz.getSimpleName() + "-" + java.util.UUID.randomUUID().toString().substring(0, 8) : 
-                    annotation.id();
-                TaskPriority priority = annotation.priority();
-                boolean isAsync = annotation.async();
-                long delay = annotation.delay();
-                long period = annotation.period();
-                String[] dependencies = annotation.dependencies();
-                boolean executeOnStartup = annotation.executeOnStartup();
-                
-                Object taskInstance = null;
-                AstraTask task = null;
-                
-                if (AbstractAstraTask.class.isAssignableFrom(clazz)) {
+        
+        for (Class<?> clazz : taskClasses) {
+            if (!clazz.isInterface() && !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers())) {
+                try {
+                    AutoRegisterTask annotation = clazz.getAnnotation(AutoRegisterTask.class);
+                    String id = annotation.id();
+                    boolean async = annotation.async();
+                    boolean executeOnStartup = annotation.executeOnStartup();
+                    long delay = annotation.delay();
+                    long period = annotation.period();
+                    TaskPriority priority = annotation.priority();
+                    
+                    Object taskInstance = null;
+                    
                     try {
                         Constructor<?> constructor = clazz.getConstructor(Astra.class);
                         taskInstance = constructor.newInstance(plugin);
-                    } catch (NoSuchMethodException e1) {
+                    } catch (NoSuchMethodException e) {
                         try {
                             Constructor<?> constructor = clazz.getConstructor();
                             taskInstance = constructor.newInstance();
-                        } catch (Exception e2) {
+                        } catch (NoSuchMethodException e2) {
                             plugin.logger().error("Could not find a suitable constructor for task: " + clazz.getName());
                             continue;
                         }
                     }
                     
-                    task = (AstraTask) taskInstance;
-                } else if (Runnable.class.isAssignableFrom(clazz)) {
-                    Runnable runnable = null;
-                    
-                    try {
-                        Constructor<?> constructor = clazz.getConstructor(Astra.class);
-                        runnable = (Runnable) constructor.newInstance(plugin);
-                    } catch (NoSuchMethodException e1) {
-                        try {
-                            Constructor<?> constructor = clazz.getConstructor();
-                            runnable = (Runnable) constructor.newInstance();
-                        } catch (Exception e2) {
-                            plugin.logger().error("Could not find a suitable constructor for task: " + clazz.getName());
-                            continue;
-                        }
-                    }
-                    
-                    if (isAsync) {
-                        task = Implements.fetch(TaskManager.class).createAsyncTask(id, runnable);
-                    } else {
-                        task = Implements.fetch(TaskManager.class).createSyncTask(id, runnable);
-                    }
-                }
-                
-                if (task != null) {
-                    task.setPriority(priority);
-                    
-                    for (String dependency : dependencies) {
-                        if (!dependency.isEmpty()) {
-                            task.addDependency(dependency);
-                        }
-                    }
-                    
-                    Implements.fetch(TaskManager.class).registerTask(task);
-                    
-                    if (executeOnStartup) {
-                        if (period > 0) {
-                            if (isAsync) {
-                                ((AsyncAstraTask)task).executeRepeating(delay, period);
+                    if (taskInstance != null) {
+                        if (executeOnStartup) {
+                            if (period > 0) {
+                                // Repeating task
+                                if (async && taskInstance instanceof AsyncAstraTask task) {
+                                    task.setPriority(priority);
+                                    task.executeRepeating(delay, period);
+                                    plugin.logger().info("Async repeating task automatically registered and started: " + id);
+                                } else if (!async && taskInstance instanceof SyncAstraTask task) {
+                                    task.setPriority(priority);
+                                    task.executeRepeating(delay, period);
+                                    plugin.logger().info("Sync repeating task automatically registered and started: " + id);
+                                }
+                            } else if (delay > 0) {
+                                // Delayed task
+                                if (async && taskInstance instanceof AsyncAstraTask task) {
+                                    task.setPriority(priority);
+                                    task.executeDelayed(delay);
+                                    plugin.logger().info("Async delayed task automatically registered and scheduled: " + id);
+                                } else if (!async && taskInstance instanceof SyncAstraTask task) {
+                                    task.setPriority(priority);
+                                    task.executeDelayed(delay);
+                                    plugin.logger().info("Sync delayed task automatically registered and scheduled: " + id);
+                                }
                             } else {
-                                ((SyncAstraTask)task).executeRepeating(delay, period);
-                            }
-                        } else if (delay > 0) {
-                            if (isAsync) {
-                                ((AsyncAstraTask)task).executeDelayed(delay);
-                            } else {
-                                ((SyncAstraTask)task).executeDelayed(delay);
+                                // Immediate task
+                                if (async && taskInstance instanceof AsyncAstraTask task) {
+                                    task.setPriority(priority);
+                                    task.execute();
+                                    plugin.logger().info("Async task automatically registered and executed: " + id);
+                                } else if (!async && taskInstance instanceof SyncAstraTask task) {
+                                    task.setPriority(priority);
+                                    task.execute();
+                                    plugin.logger().info("Sync task automatically registered and executed: " + id);
+                                }
                             }
                         } else {
-                            if (isAsync) {
-                                ((AsyncAstraTask)task).execute();
-                            } else {
-                                ((SyncAstraTask)task).execute();
-                            }
+                            plugin.logger().info("Task automatically registered (not started): " + id);
                         }
                     }
-
-                    plugin.logger().info("Task automatically registered: " + clazz.getSimpleName() + " (ID: " + id + ")");
+                } catch (Exception e) {
+                    plugin.logger().error("Could not register the task: " + clazz.getName(), e);
                 }
-            } catch (Exception e) {
-                plugin.logger().error("Could not register the task: " + clazz.getName(), e);
             }
         }
     }
