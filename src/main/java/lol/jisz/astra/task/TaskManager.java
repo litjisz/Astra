@@ -88,6 +88,19 @@ public class TaskManager extends AbstractModule {
     /**
      * Registers and schedules a task for execution.
      * @param task Task to schedule
+     * @param schedule Whether to schedule the task immediately
+     * @return The registered task
+     */
+    public AstraTask registerTask(AstraTask task, boolean schedule) {
+        if (task == null) return null;
+
+        taskRegistry.put(task.getId(), task);
+        return schedule ? scheduleTask(task) : task;
+    }
+
+    /**
+     * Registers and schedules a task for execution.
+     * @param task Task to schedule
      * @return The registered task
      */
     public AstraTask scheduleTask(AstraTask task) {
@@ -417,7 +430,56 @@ public class TaskManager extends AbstractModule {
     public AstraTask getTask(String taskId) {
         return taskRegistry.get(taskId);
     }
-    
+
+    /**
+     * Executes a registered task by its ID.
+     * This method retrieves a task from the registry and executes it immediately,
+     * regardless of its dependencies or scheduling status.
+     *
+     * @param taskId The unique identifier of the task to execute
+     * @return The executed task if found and executed successfully, or null if the task wasn't found
+     */
+    public AstraTask executeTask(String taskId) {
+        AstraTask task = taskRegistry.get(taskId);
+        if (task != null) {
+            if (task instanceof AsyncAstraTask) {
+                ((AsyncAstraTask) task).execute();
+                logger.debug("Executing async task " + task.getId() + " with priority " + task.getPriority());
+            } else if (task instanceof SyncAstraTask) {
+                ((SyncAstraTask) task).execute();
+                logger.debug("Executing sync task " + task.getId() + " with priority " + task.getPriority());
+            }
+            configureTaskCallbacks(task);
+
+            return task;
+        }
+        return null;
+    }
+
+    /**
+     * Executes a task immediately, regardless of its dependencies or scheduling status.
+     * This method will execute the provided task directly, incrementing the async task counter
+     * if the task is asynchronous.
+     *
+     * @param task The task to execute. Can be either a synchronous or asynchronous task.
+     * @return The executed task if it was successfully executed, or null if the task was null
+     */
+    public AstraTask executeTask(AstraTask task) {
+        if (task != null) {
+            if (task instanceof AsyncAstraTask) {
+                ((AsyncAstraTask) task).execute();
+                logger.debug("Executing async task " + task.getId() + " with priority " + task.getPriority());
+            } else if (task instanceof SyncAstraTask) {
+                ((SyncAstraTask) task).execute();
+                logger.debug("Executing sync task " + task.getId() + " with priority " + task.getPriority());
+            }
+            configureTaskCallbacks(task);
+
+            return task;
+        }
+        return null;
+    }
+
     /**
      * Cancels a specific task.
      * @param taskId ID of the task to cancel

@@ -25,7 +25,7 @@ public class AstraCommand extends CommandBase {
             List<String> messages = Arrays.asList(
                     Text.colorize(" "),
                     Text.gradient("☽ Astra", "9863E7", "C69FFF") +
-                    Text.colorize(" &8| &fFramwork built with &c❤ &fby &Astra Team"),
+                    Text.colorize(" &8| &fFramwork built with &c❤ &fby &aAstra Team"),
                     Text.colorize(" "),
                     Text.center("&eThis plugin is developed with Astra Framework"),
                     Text.center("&eA framework to optimize plugin development"),
@@ -62,7 +62,7 @@ public class AstraCommand extends CommandBase {
         List<String> githubMessages = Arrays.asList(
                 Text.colorize(" "),
                 Text.gradient("☽ Astra", "9863E7", "C69FFF") +
-                Text.colorize(" &8| &fFramwork built with &c❤ &fby &Astra Team"),
+                Text.colorize(" &8| &fFramwork built with &c❤ &fby &aAstra Team"),
                 Text.colorize(" "),
                 Text.colorize("&8 ⏩ &fRepository: &bhttps://github.com/litjisz/Astra"),
                 Text.colorize("&8 ⚠ &fReport issues: &chttps://github.com/litjisz/Astra/issues"),
