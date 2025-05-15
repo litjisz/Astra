@@ -7,6 +7,7 @@ import lol.jisz.astra.utils.Text;
 import org.bukkit.Bukkit;
 
 import java.lang.reflect.Field;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -115,13 +116,12 @@ public class TaskManager extends AbstractModule {
 
         configureTaskCallbacks(task);
 
-        if (hasPendingDependencies(task)) {
+        if (!hasPendingDependencies(task)) {
+            pendingTasks.add(task);
+            logger.debug("Task " + task.getId() + " added to queue with priority " + task.getPriority());
+        } else {
             logger.debug("Task " + task.getId() + " has pending dependencies, waiting...");
-            return task;
         }
-
-        pendingTasks.add(task);
-        logger.debug("Task " + task.getId() + " added to queue with priority " + task.getPriority());
 
         processNextTasks();
 
@@ -216,26 +216,47 @@ public class TaskManager extends AbstractModule {
         }
     }
 
-    /**
-     * Checks if a task has pending dependencies.
-     * @param task Task to check
-     * @return true if it has pending dependencies, false otherwise
-     */
     private boolean hasPendingDependencies(AstraTask task) {
         Set<String> dependencies = task.getDependencies();
         if (dependencies.isEmpty()) {
             return false;
         }
 
-        for (String dependencyId : dependencies) {
+        Set<String> visited = new HashSet<>();
+        visited.add(task.getId());
+
+        return hasPendingDependenciesRecursive(task, visited);
+    }
+
+    /**
+     * Checks if the given task has any pending dependencies recursively.
+     *
+     * @param task The task to check for pending dependencies.
+     * @param visited A set to keep track of visited tasks to avoid circular dependencies.
+     * @return true if the task or any of its dependencies have pending dependencies, false otherwise.
+     */
+    private boolean hasPendingDependenciesRecursive(AstraTask task, Set<String> visited) {
+        for (String dependencyId : task.getDependencies()) {
+            if (visited.contains(dependencyId)) {
+                logger.error("Circular dependency detected involving task " + task.getId() +
+                            " and " + dependencyId);
+                return true;
+            }
+
             AstraTask dependency = taskRegistry.get(dependencyId);
             if (dependency == null) {
-                logger.warning("Task " + task.getId() + " depends on a non-existent task: " + dependencyId);
+                logger.warning("Task " + task.getId() + " depends on a non-existent task: " +
+                              dependencyId + ". Marking as failed.");
+                task.onError((AstraTask.ErrorHandler) new IllegalStateException("Dependency not found: " + dependencyId));
                 return true;
             }
 
             if (!dependency.isCompleted()) {
-                return true;
+                visited.add(dependencyId);
+                if (hasPendingDependenciesRecursive(dependency, visited)) {
+                    return true;
+                }
+                visited.remove(dependencyId);
             }
         }
 
@@ -291,6 +312,7 @@ public class TaskManager extends AbstractModule {
 
                 if (hasPendingDependencies(nextTask)) {
                     logger.debug("Task " + nextTask.getId() + " has pending dependencies, returning to queue");
+                    pendingTasks.add(nextTask);
                     continue;
                 }
 
@@ -315,10 +337,6 @@ public class TaskManager extends AbstractModule {
      * Gets the current server load.
      * @return Value between 0.0 and 1.0 representing server load
      */
-    /**
-     * Gets the current server load.
-     * @return Value between 0.0 and 1.0 representing server load
-     */
     private double getServerLoad() {
         try {
             java.lang.management.OperatingSystemMXBean osBean =
@@ -337,23 +355,35 @@ public class TaskManager extends AbstractModule {
             return 0.5;
         }
     }
-    
+
     /**
-     * Adjusts concurrency limits based on server load.
-     * @param currentLoad Current server load
+     * Adjusts the concurrency limits for asynchronous tasks based on the current server load.
+     *
+     * @param currentLoad The current server load, represented as a value between 0.0 and 1.0.
+     *
+     * The method calculates a new limit for the maximum number of concurrent asynchronous tasks
+     * based on the current load and a predefined range. The new limit is then clamped to ensure it falls
+     * within the specified range. If the new limit is higher than the current limit, the limit is increased
+     * by 2. If the new limit is lower than the current limit, the limit is decreased by 2.
+     *
+     * The method logs a debug message indicating the adjusted limit and the current server load.
      */
     private void adjustConcurrencyLimits(double currentLoad) {
-        if (currentLoad > 0.9) { // Very high load
-            maxConcurrentAsyncTasks = 2;
-        } else if (currentLoad > 0.7) { // High load
-            maxConcurrentAsyncTasks = 5;
-        } else if (currentLoad > 0.5) { // Medium load
-            maxConcurrentAsyncTasks = 10;
-        } else if (currentLoad > 0.3) { // Low load
-            maxConcurrentAsyncTasks = 15;
-        } else { // Very low load
-            maxConcurrentAsyncTasks = 20;
+        int minTasks = 2;
+        int maxTasks = 20;
+
+        int newLimit = (int) Math.round(maxTasks - (currentLoad * (maxTasks - minTasks)));
+        newLimit = Math.max(minTasks, Math.min(maxTasks, newLimit));
+
+        if (newLimit > maxConcurrentAsyncTasks) {
+            maxConcurrentAsyncTasks = Math.min(newLimit, maxConcurrentAsyncTasks + 2);
+        } else if (newLimit < maxConcurrentAsyncTasks) {
+            maxConcurrentAsyncTasks = Math.max(newLimit, maxConcurrentAsyncTasks - 2);
         }
+
+        logger.debug("Adjusted concurrent async tasks limit to " + maxConcurrentAsyncTasks +
+                    " (server load: " + String.format("%.2f", currentLoad * 100) + "%)");
+
     }
     
     /**
@@ -375,25 +405,29 @@ public class TaskManager extends AbstractModule {
      * Cleans up completed or cancelled tasks from the registry.
      */
     private void cleanupTasks() {
+        Set<String> taskIds = new HashSet<>(taskRegistry.keySet());
         int removed = 0;
-        for (String taskId : taskRegistry.keySet()) {
+        for (String taskId : taskIds) {
             AstraTask task = taskRegistry.get(taskId);
-            if (task != null && (task.isCompleted() || task.isCancelled())) {
+            if (task == null) continue;
+
+            if (task.isCompleted() || task.isCancelled()) {
                 boolean hasDependents = false;
                 for (AstraTask otherTask : taskRegistry.values()) {
-                    if (otherTask.getDependencies().contains(taskId)) {
+                    if (!otherTask.isCompleted() && !otherTask.isCancelled() &&
+                        otherTask.getDependencies().contains(taskId)) {
                         hasDependents = true;
                         break;
                     }
                 }
-                
+
                 if (!hasDependents) {
                     taskRegistry.remove(taskId);
                     removed++;
                 }
             }
         }
-        
+
         if (removed > 0) {
             logger.debug("Task cleanup: " + removed + " tasks removed from registry");
         }
