@@ -123,6 +123,20 @@ public class CommandManager {
     }
 
     /**
+     * Gets a command by its name
+     * @param name Name of the command to get
+     * @return CommandBase instance if found, null otherwise
+     */
+    public CommandBase getCommand(String name) {
+        for (CommandBase command : commands) {
+            if (command.getName().equalsIgnoreCase(name)) {
+                return command;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Checks if a command with the given name is registered
      * @param name Name of the command to check
      * @return true if a command with that name is registered, false otherwise
