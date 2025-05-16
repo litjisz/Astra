@@ -2,14 +2,18 @@ package lol.jisz.astra.api;
 
 import lol.jisz.astra.Astra;
 import lol.jisz.astra.command.CommandManager;
+import lol.jisz.astra.database.DatabaseManager;
+import lol.jisz.astra.database.DatabaseModule;
 import lol.jisz.astra.task.TaskManager;
 import lol.jisz.astra.utils.Logger;
 
 public class PluginHelper {
 
     private final Astra plugin;
-    private CommandManager commandManager;
     private final Logger logger;
+
+    private CommandManager commandManager;
+    private DatabaseManager databaseManager;
 
     /**
      * Constructor for the PluginHelper class.
@@ -113,6 +117,54 @@ public class PluginHelper {
     }
 
     /**
+     * Initializes the database system by creating a DatabaseManager and optionally registering 
+     * the DatabaseModule in the Implements system.
+     * This method can be called to enable database functionality in the plugin.
+     *
+     * @param registerModule Whether to register the module in the Implements system
+     * @return The initialized DatabaseModule instance, or null if initialization failed
+     */
+    public DatabaseModule initDatabaseSystem(boolean registerModule) {
+        try {
+            this.databaseManager = new DatabaseManager(plugin);
+            DatabaseModule databaseModule = new DatabaseModule(plugin);
+
+            if (registerModule) {
+                Implements.register(databaseModule);
+                logger.info("Database system initialized and module registered successfully");
+            } else {
+                logger.info("Database system initialized successfully");
+            }
+
+            return databaseModule;
+        } catch (Exception e) {
+            logger.error("Error initializing the database system", e);
+            return null;
+        }
+    }
+
+    /**
+     * Initializes the database system without registering the module.
+     * This method can be called to enable database functionality in the plugin.
+     *
+     * @return The initialized DatabaseModule instance, or null if initialization failed
+     */
+    public DatabaseModule initDatabaseSystem() {
+        try {
+            this.databaseManager = new DatabaseManager(plugin);
+            DatabaseModule databaseModule = new DatabaseModule(plugin);
+
+            Implements.register(databaseModule);
+            logger.info("Database system initialized and module registered successfully");
+
+            return databaseModule;
+        } catch (Exception e) {
+            logger.error("Error initializing the database system", e);
+            return null;
+        }
+    }
+
+    /**
      * Loads the plugin configuration by ensuring default configuration exists.
      * This is a private helper method called during the load process.
      */
@@ -142,5 +194,13 @@ public class PluginHelper {
      */
     public Astra getPlugin() {
         return plugin;
+    }
+
+    /**
+     * Gets the database manager instance.
+     * @return The DatabaseManager instance used by this plugin, or null if not initialized
+     */
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
 }

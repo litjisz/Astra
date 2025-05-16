@@ -129,6 +129,41 @@ public class ConfigManager {
     }
 
     /**
+     * Checks if a configuration exists
+     * @param name Configuration name
+     * @return true if it exists, false otherwise
+     */
+    public boolean configExists(String name) {
+        return configs.containsKey(name) || new File(plugin.getDataFolder(), name + ".yml").exists();
+    }
+
+    /**
+     * Creates a new configuration file
+     *
+     * @param name Configuration name
+     */
+    public void createFileConfiguration(String name) {
+        File file = new File(plugin.getDataFolder(), name + ".yml");
+        if (!file.exists()) {
+            try {
+                if (file.getParentFile() != null) {
+                    file.getParentFile().mkdirs();
+                }
+                if (file.createNewFile()) {
+                    logger.info("Configuration file created: " + name + ".yml");
+                }
+            } catch (IOException ex) {
+                logger.error("Could not create the file: " + name + ".yml", ex);
+                return;
+            }
+        }
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+        configs.put(name, config);
+        configFiles.put(name, file);
+    }
+
+    /**
      * Reloads a configuration
      * @param name Configuration name
      * @return Reloaded FileConfiguration
@@ -348,5 +383,22 @@ public class ConfigManager {
         }
 
         return fileConfig.getDouble(path, defaultValue);
+    }
+
+    /**
+     * Gets a boolean value from the specified configuration.
+     *
+     * @param config The name of the configuration file to retrieve the value from
+     * @param path The path to the value within the configuration
+     * @param defaultValue The default value to return if the path doesn't exist or the configuration can't be loaded
+     * @return The boolean value at the specified path, or the default value if not found
+     */
+    public boolean getBoolean(String config, String path, boolean defaultValue) {
+        FileConfiguration fileConfig = getConfig(config);
+        if (fileConfig == null) {
+            return defaultValue;
+        }
+
+        return fileConfig.getBoolean(path, defaultValue);
     }
 }

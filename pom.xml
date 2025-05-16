@@ -147,6 +147,11 @@
             <artifactId>reflections</artifactId>
             <version>0.10.2</version>
         </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>5.2.1</version>
+        </dependency>
     </dependencies>
 
     <profiles>
