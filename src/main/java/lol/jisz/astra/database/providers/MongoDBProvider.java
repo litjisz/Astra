@@ -1,357 +1,419 @@
 package lol.jisz.astra.database.providers;
 
+import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
-import com.mongodb.client.result.DeleteResult;
-import com.mongodb.client.result.UpdateResult;
+import com.mongodb.client.model.ReplaceOptions;
 import lol.jisz.astra.Astra;
-import lol.jisz.astra.database.DatabaseProvider;
-import lol.jisz.astra.database.DatabaseType;
-import lol.jisz.astra.utils.Logger;
+import lol.jisz.astra.database.AstraDatabase;
+import lol.jisz.astra.database.interfaces.StorageObject;
+import lol.jisz.astra.task.AsyncAstraTask;
 import org.bson.Document;
-import org.bson.conversions.Bson;
+import org.bukkit.configuration.file.FileConfiguration;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.*;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static com.mongodb.client.model.Filters.eq;
 
 /**
- * MongoDB implementation of the DatabaseProvider interface.
- * Provides functionality to interact with a MongoDB database.
+ * MongoDB provider for Astra database
+ * This class provides methods to interact with a MongoDB database.
+ * It allows for saving, finding, and deleting objects in the database.
  */
-public class MongoDBProvider implements DatabaseProvider {
-    private final Logger logger;
+public class MongoDBProvider extends AstraDatabase {
+
+    private MongoClient mongoClient;
+    private MongoDatabase database;
+
     private final String host;
     private final int port;
-    private final String database;
+    private final String databaseName;
     private final String username;
     private final String password;
-    private final boolean useAuth;
-
-    private MongoClient client;
-    private MongoDatabase db;
+    private final Astra plugin;
+    
+    private final Map<Class<?>, String> collectionNameCache = new ConcurrentHashMap<>();
+    private final Map<Class<?>, List<Field>> classFieldsCache = new ConcurrentHashMap<>();
+    private static final ReplaceOptions UPSERT_OPTIONS = new ReplaceOptions().upsert(true);
 
     /**
-     * Constructs a new MongoDB provider with the specified connection parameters.
+     * Creates a MongoDB provider
      *
-     * @param plugin    The Astra plugin instance providing the logger
-     * @param host      The hostname or IP address of the MongoDB server
-     * @param port      The port number on which the MongoDB server is listening
-     * @param database  The name of the database to connect to
-     * @param username  The username for authentication (can be null for no authentication)
-     * @param password  The password for authentication (can be null for no authentication)
+     * @param plugin The Astra plugin instance
+     * @param host The MongoDB host
+     * @param port The MongoDB port
+     * @param databaseName The database name
+     * @param username The username (can be empty)
+     * @param password The password (can be empty)
      */
-    public MongoDBProvider(Astra plugin, String host, int port, String database, String username, String password) {
-        this.logger = plugin.logger();
+    public MongoDBProvider(Astra plugin, String host, int port, String databaseName, String username, String password) {
+        this.plugin = plugin;
         this.host = host;
         this.port = port;
-        this.database = database;
+        this.databaseName = databaseName;
         this.username = username;
         this.password = password;
-        this.useAuth = username != null && !username.isEmpty() && password != null;
     }
 
     /**
-     * Initializes the MongoDB connection using the provided configuration.
-     * Creates a connection with or without authentication based on the provided credentials.
+     * Creates a MongoDB provider using configuration values from a FileConfiguration.
+     * This constructor extracts MongoDB connection parameters from the provided configuration
+     * using predefined keys.
+     *
+     * @param plugin The Astra plugin instance that will be used for logging and task management
+     * @param config The FileConfiguration containing MongoDB connection parameters with the following keys:
+     *              - mongodb.host: The hostname or IP address of the MongoDB server
+     *              - mongodb.port: The port number on which MongoDB is running
+     *              - mongodb.database: The name of the database to connect to
+     *              - mongodb.username: The username for authentication (can be empty)
+     *              - mongodb.password: The password for authentication (can be empty)
      */
-    @Override
-    public void initialize() {
-        try {
-            if (useAuth) {
-                MongoCredential credential = MongoCredential.createCredential(
-                        username, database, password.toCharArray());
+    public MongoDBProvider(Astra plugin, FileConfiguration config) {
+        this.plugin = plugin;
+        this.host = config.getString("mongodb.host");
+        this.port = config.getInt("mongodb.port");
+        this.databaseName = config.getString("mongodb.database");
+        this.username = config.getString("mongodb.username");
+        this.password = config.getString("mongodb.password");
+    }
 
+    /**
+     * Initializes the MongoDB connection
+     *
+     * @throws Exception if connection fails
+     */
+    public void initialize() throws Exception {
+        String uri;
+        if (username != null && !username.isEmpty() && password != null && !password.isEmpty()) {
+            uri = String.format("mongodb://%s:%s@%s:%d/%s", username, password, host, port, databaseName);
+        } else {
+            uri = String.format("mongodb://%s:%d/%s", host, port, databaseName);
+        }
+
+        AsyncAstraTask connectionTask = new AsyncAstraTask(plugin, "mongodb-connection", () -> {
+            try {
                 MongoClientSettings settings = MongoClientSettings.builder()
-                        .credential(credential)
-                        .applyToClusterSettings(builder ->
-                                builder.hosts(Arrays.asList(new ServerAddress(host, port))))
+                        .applyConnectionString(new ConnectionString(uri))
+                        .applicationName(plugin.getDescription().getName())
                         .build();
 
-                client = MongoClients.create(settings);
-            } else {
-                client = MongoClients.create("mongodb://" + host + ":" + port);
+                mongoClient = MongoClients.create(settings);
+                database = mongoClient.getDatabase(databaseName);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to connect to MongoDB: " + e.getMessage(), e);
             }
+        });
 
-            db = client.getDatabase(database);
-            logger.info("Connected to MongoDB database: " + database);
-        } catch (Exception e) {
-            logger.error("Failed to connect to MongoDB", e);
-        }
+        connectionTask.execute();
+        plugin.logger().info("Connected to MongoDB database: " + databaseName);
     }
 
-    /**
-     * MongoDB does not support JDBC connections.
-     * This method is implemented to satisfy the DatabaseProvider interface but will throw an exception if called.
-     *
-     * @return Never returns a connection
-     * @throws Exception Always throws UnsupportedOperationException
-     */
-    @Override
-    public Connection getConnection() throws Exception {
-        if (!isValid()) {
-            throw new SQLException("No active MongoDB connection available");
-        }
-
-        throw new UnsupportedOperationException("MongoDB does not support JDBC connections. Use the MongoDB client directly.");
-    }
-
-    /**
-     * Closes the MongoDB client connection if it exists.
-     */
     @Override
     public void close() {
-        if (client != null) {
-            client.close();
-            logger.info("MongoDB connection closed");
+        if (mongoClient != null) {
+            mongoClient.close();
+            plugin.logger().info("MongoDB connection closed");
         }
     }
 
-    /**
-     * Checks if the MongoDB connection is valid by sending a ping command.
-     *
-     * @return true if the connection is valid, false otherwise
-     */
     @Override
-    public boolean isValid() {
-        try {
-            if (client != null && db != null) {
-                db.runCommand(new Document("ping", 1));
-                return true;
-            }
-            return false;
-        } catch (Exception e) {
-            logger.debug("MongoDB connection is not valid: " + e.getMessage());
-            return false;
+    public String getType() {
+        return "MongoDB";
+    }
+
+    @Override
+    public <T extends StorageObject> CompletableFuture<Optional<T>> findById(Class<T> clazz, String id) {
+        return CompletableFuture.supplyAsync(() -> findByIdSync(clazz, id));
+    }
+
+    @Override
+    public <T extends StorageObject> Optional<T> findByIdSync(Class<T> clazz, String id) {
+        ensureDatabaseConnected();
+
+        String collectionName = getCollectionName(clazz);
+        MongoCollection<Document> collection = database.getCollection(collectionName);
+        Document document = collection.find(eq("_id", id)).first();
+
+        if (document == null) {
+            return Optional.empty();
         }
+
+        T object = instantiateObject(clazz, document);
+        return Optional.ofNullable(object);
     }
 
-    /**
-     * Returns the database type of this provider.
-     *
-     * @return The DatabaseType enum value representing MongoDB
-     */
     @Override
-    public DatabaseType getType() {
-        return DatabaseType.MONGODB;
+    public <T extends StorageObject> CompletableFuture<Set<T>> findAll(Class<T> clazz) {
+        return CompletableFuture.supplyAsync(() -> findAllSync(clazz));
     }
 
-    /**
-     * Creates a new collection in the MongoDB database if it doesn't already exist.
-     *
-     * @param name The name of the collection to create
-     * @return true if the collection was created or already exists, false if an error occurred
-     */
     @Override
-    public boolean createCollection(String name) {
-        try {
-            if (!collectionExists(name)) {
-                db.createCollection(name);
-            }
-            return true;
-        } catch (Exception e) {
-            logger.error("Failed to create collection: " + name, e);
-            return false;
-        }
-    }
+    public <T extends StorageObject> Set<T> findAllSync(Class<T> clazz) {
+        ensureDatabaseConnected();
 
-    /**
-     * Checks if a collection with the specified name exists in the database.
-     *
-     * @param name The name of the collection to check
-     * @return true if the collection exists, false otherwise
-     */
-    private boolean collectionExists(String name) {
-        for (String collectionName : db.listCollectionNames()) {
-            if (collectionName.equals(name)) {
-                return true;
+        Set<T> results = new HashSet<>();
+        String collectionName = getCollectionName(clazz);
+        MongoCollection<Document> collection = database.getCollection(collectionName);
+
+        for (Document document : collection.find()) {
+            T object = instantiateObject(clazz, document);
+            if (object != null) {
+                results.add(object);
             }
         }
-        return false;
-    }
 
-    /**
-     * Inserts a new document into the specified collection.
-     *
-     * @param collection The name of the collection to insert into
-     * @param data A map containing the document data to insert
-     * @return true if the insertion was successful, false otherwise
-     */
-    @Override
-    public boolean insert(String collection, Map<String, Object> data) {
-        try {
-            MongoCollection<Document> coll = db.getCollection(collection);
-            Document doc = new Document(data);
-            coll.insertOne(doc);
-            return true;
-        } catch (Exception e) {
-            logger.error("Failed to insert document into collection: " + collection, e);
-            return false;
-        }
-    }
-
-    /**
-     * Asynchronously inserts a new document into the specified collection.
-     *
-     * @param collection The name of the collection to insert into
-     * @param data A map containing the document data to insert
-     * @return A CompletableFuture that will resolve to true if the insertion was successful, false otherwise
-     */
-    @Override
-    public CompletableFuture<Boolean> insertAsync(String collection, Map<String, Object> data) {
-        return CompletableFuture.supplyAsync(() -> insert(collection, data));
-    }
-
-    /**
-     * Updates documents in the specified collection that match the given filter with the provided updates.
-     *
-     * @param collection The name of the collection to update documents in
-     * @param filter A map containing the filter criteria to match documents
-     * @param updates A map containing the fields to update and their new values
-     * @return The number of documents that were modified
-     */
-    @Override
-    public int update(String collection, Map<String, Object> filter, Map<String, Object> updates) {
-        try {
-            MongoCollection<Document> coll = db.getCollection(collection);
-            Bson filterDoc = createFilter(filter);
-            Bson updateDoc = createUpdate(updates);
-            UpdateResult result = coll.updateMany(filterDoc, updateDoc);
-            return (int) result.getModifiedCount();
-        } catch (Exception e) {
-            logger.error("Failed to update documents in collection: " + collection, e);
-            return 0;
-        }
-    }
-
-    /**
-     * Asynchronously updates documents in the specified collection that match the given filter.
-     *
-     * @param collection The name of the collection to update documents in
-     * @param filter A map containing the filter criteria to match documents
-     * @param updates A map containing the fields to update and their new values
-     * @return A CompletableFuture that will resolve to the number of documents that were modified
-     */
-    @Override
-    public CompletableFuture<Integer> updateAsync(String collection, Map<String, Object> filter, Map<String, Object> updates) {
-        return CompletableFuture.supplyAsync(() -> update(collection, filter, updates));
-    }
-
-    /**
-     * Finds documents in the specified collection that match the given filter.
-     *
-     * @param collection The name of the collection to search in
-     * @param filter A map containing the filter criteria to match documents
-     * @return A list of maps, each representing a document that matched the filter
-     */
-    @Override
-    public List<Map<String, Object>> find(String collection, Map<String, Object> filter) {
-        List<Map<String, Object>> results = new ArrayList<>();
-        try {
-            MongoCollection<Document> coll = db.getCollection(collection);
-            Bson filterDoc = createFilter(filter);
-
-            for (Document doc : coll.find(filterDoc)) {
-                Map<String, Object> map = new HashMap<>();
-                for (String key : doc.keySet()) {
-                    map.put(key, doc.get(key));
-                }
-                results.add(map);
-            }
-        } catch (Exception e) {
-            logger.error("Failed to find documents in collection: " + collection, e);
-        }
         return results;
     }
 
-    /**
-     * Asynchronously finds documents in the specified collection that match the given filter.
-     *
-     * @param collection The name of the collection to search in
-     * @param filter A map containing the filter criteria to match documents
-     * @return A CompletableFuture that will resolve to a list of maps, each representing a document that matched the filter
-     */
     @Override
-    public CompletableFuture<List<Map<String, Object>>> findAsync(String collection, Map<String, Object> filter) {
-        return CompletableFuture.supplyAsync(() -> find(collection, filter));
+    public <T extends StorageObject> CompletableFuture<Void> save(T object) {
+        return CompletableFuture.runAsync(() -> saveSync(object));
     }
 
-    /**
-     * Deletes documents from the specified collection that match the given filter.
-     *
-     * @param collection The name of the collection to delete documents from
-     * @param filter A map containing the filter criteria to match documents for deletion
-     * @return The number of documents that were deleted
-     */
     @Override
-    public int delete(String collection, Map<String, Object> filter) {
+    public <T extends StorageObject> void saveSync(T object) {
+        ensureDatabaseConnected();
+
+        Document document = createDocumentFromObject(object);
+        String id = object.getId();
+        document.put("_id", id);
+
+        String collectionName = getCollectionName(object.getClass());
+        MongoCollection<Document> collection = database.getCollection(collectionName);
+        
+        collection.replaceOne(eq("_id", id), document, UPSERT_OPTIONS);
+    }
+
+    @Override
+    public <T extends StorageObject> CompletableFuture<Void> delete(Class<T> clazz, String id) {
+        return CompletableFuture.runAsync(() -> deleteSync(clazz, id));
+    }
+
+    @Override
+    public <T extends StorageObject> void deleteSync(Class<T> clazz, String id) {
+        ensureDatabaseConnected();
+
+        String collectionName = getCollectionName(clazz);
+        MongoCollection<Document> collection = database.getCollection(collectionName);
+        collection.deleteOne(eq("_id", id));
+    }
+
+    private String getCollectionName(Class<?> clazz) {
+        return collectionNameCache.computeIfAbsent(clazz, c -> {
+            try {
+                Method method = c.getDeclaredMethod("getCollectionName");
+                method.setAccessible(true);
+                Object result = method.invoke(null);
+                if (result instanceof String) {
+                    return (String) result;
+                }
+            } catch (Exception ignored) {
+                plugin.logger().error("Failed to get collection name for class: " + c.getName());
+            }
+            return c.getSimpleName().toLowerCase();
+        });
+    }
+
+    private Document createDocumentFromObject(Object obj) {
+        Document document = new Document();
+        Class<?> objClass = obj.getClass();
+        
+        List<Field> fields = getClassFields(objClass);
+        
+        for (Field field : fields) {
+            String fieldName = field.getName();
+            
+            try {
+                Object value = field.get(obj);
+                
+                if (value == null) {
+                    continue;
+                }
+                
+                processFieldValue(document, fieldName, value);
+            } catch (IllegalAccessException e) {
+                plugin.logger().error("Failed to access field: " + fieldName, e);
+            }
+        }
+        
+        return document;
+    }
+    
+    private void processFieldValue(Document document, String fieldName, Object value) {
+        if (value instanceof StorageObject) {
+            document.put(fieldName, createDocumentFromObject(value));
+        } else if (value instanceof Map<?, ?> map) {
+            Document mapDoc = new Document();
+            map.forEach((k, v) -> {
+                if (v instanceof StorageObject) {
+                    mapDoc.put(k.toString(), createDocumentFromObject(v));
+                } else {
+                    mapDoc.put(k.toString(), v);
+                }
+            });
+            document.put(fieldName, mapDoc);
+        } else if (value instanceof Collection<?> collection) {
+            List<Object> list = new ArrayList<>(collection.size());
+            for (Object item : collection) {
+                if (item instanceof StorageObject) {
+                    list.add(createDocumentFromObject(item));
+                } else {
+                    list.add(item);
+                }
+            }
+            document.put(fieldName, list);
+        } else if (value.getClass().isArray()) {
+            processArrayValue(document, fieldName, value);
+        } else if (value instanceof Enum<?>) {
+            document.put(fieldName, ((Enum<?>) value).name());
+        } else {
+            document.put(fieldName, value);
+        }
+    }
+    
+    private void processArrayValue(Document document, String fieldName, Object array) {
+        int length = Array.getLength(array);
+        List<Object> list = new ArrayList<>(length);
+        for (int i = 0; i < length; i++) {
+            Object item = Array.get(array, i);
+            if (item instanceof StorageObject) {
+                list.add(createDocumentFromObject(item));
+            } else {
+                list.add(item);
+            }
+        }
+        document.put(fieldName, list);
+    }
+
+    private List<Field> getClassFields(Class<?> clazz) {
+        return classFieldsCache.computeIfAbsent(clazz, this::getAllFields);
+    }
+
+    private List<Field> getAllFields(Class<?> clazz) {
+        List<Field> fields = new ArrayList<>();
+        Class<?> currentClass = clazz;
+        
+        while (currentClass != null && currentClass != Object.class) {
+            for (Field field : currentClass.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers())) {
+                    field.setAccessible(true);
+                    fields.add(field);
+                }
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+        
+        return fields;
+    }
+
+    private <T> T instantiateObject(Class<T> clazz, Document document) {
         try {
-            MongoCollection<Document> coll = db.getCollection(collection);
-            Bson filterDoc = createFilter(filter);
-            DeleteResult result = coll.deleteMany(filterDoc);
-            return (int) result.getDeletedCount();
+            Constructor<T> constructor = clazz.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            T instance = constructor.newInstance();
+            
+            List<Field> fields = getClassFields(clazz);
+            
+            for (Field field : fields) {
+                String fieldName = field.getName();
+                
+                if (!document.containsKey(fieldName)) {
+                    continue;
+                }
+                
+                Object value = document.get(fieldName);
+                
+                if (value == null) {
+                    continue;
+                }
+                
+                Class<?> fieldType = field.getType();
+                setFieldValue(instance, field, fieldType, value);
+            }
+            return instance;
         } catch (Exception e) {
-            logger.error("Failed to delete documents from collection: " + collection, e);
-            return 0;
+            plugin.logger().error("Failed to instantiate object of class: " + clazz.getName(), e);
+            return null;
+        }
+    }
+    
+    private <T> void setFieldValue(T instance, Field field, Class<?> fieldType, Object value) throws IllegalAccessException {
+        try {
+            switch (value) {
+                case Document document when StorageObject.class.isAssignableFrom(fieldType) -> {
+                    Object nestedObject = instantiateObject(fieldType, document);
+                    field.set(instance, nestedObject);
+                }
+                case List<?> list when StorageObject.class.isAssignableFrom(fieldType.getComponentType()) -> {
+                    List<Object> nestedObjects = new ArrayList<>();
+                    for (Object item : list) {
+                        if (item instanceof Document doc) {
+                            nestedObjects.add(instantiateObject(fieldType.getComponentType(), doc));
+                        } else {
+                            nestedObjects.add(item);
+                        }
+                    }
+                    field.set(instance, nestedObjects);
+                }
+                case Map<?, ?> map when StorageObject.class.isAssignableFrom(fieldType) -> {
+                    Map<Object, Object> nestedMap = new HashMap<>();
+                    for (Map.Entry<?, ?> entry : map.entrySet()) {
+                        if (entry.getValue() instanceof Document doc) {
+                            nestedMap.put(entry.getKey(), instantiateObject(fieldType, doc));
+                        } else {
+                            nestedMap.put(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    field.set(instance, nestedMap);
+                }
+                case null, default -> {
+                    if (Collection.class.isAssignableFrom(fieldType)) {
+                        Type genericType = field.getGenericType();
+                        if (genericType instanceof ParameterizedType) {
+                            Type[] typeArguments = ((ParameterizedType) genericType).getActualTypeArguments();
+                            if (typeArguments.length > 0 && typeArguments[0] instanceof Class<?> itemType) {
+                                List<Object> list = new ArrayList<>();
+
+                                assert value != null;
+                                for (Object item : (Collection<?>) value) {
+                                    if (item instanceof Document doc) {
+                                        list.add(instantiateObject(itemType, doc));
+                                    } else {
+                                        list.add(item);
+                                    }
+                                }
+
+                                field.set(instance, list);
+                            } else {
+                                field.set(instance, value);
+                            }
+                        }
+                    }
+                    field.set(instance, value);
+                }
+            }
+        } catch (IllegalAccessException e) {
+            plugin.logger().error("Failed to set field value for field: " + field.getName(), e);
         }
     }
 
     /**
-     * Asynchronously deletes documents from the specified collection that match the given filter.
-     *
-     * @param collection The name of the collection to delete documents from
-     * @param filter A map containing the filter criteria to match documents for deletion
-     * @return A CompletableFuture that will resolve to the number of documents that were deleted
+     * Ensures that the database connection is established
+     * @throws IllegalStateException if the database connection is not established
      */
-    @Override
-    public CompletableFuture<Integer> deleteAsync(String collection, Map<String, Object> filter) {
-        return CompletableFuture.supplyAsync(() -> delete(collection, filter));
-    }
-
-    /**
-     * Creates a MongoDB filter document from a map of filter criteria.
-     *
-     * @param filter A map containing the filter criteria where keys are field names and values are the values to match
-     * @return A Bson object representing the filter criteria
-     */
-    private Bson createFilter(Map<String, Object> filter) {
-        if (filter == null || filter.isEmpty()) {
-            return new Document();
+    private void ensureDatabaseConnected() {
+        if (mongoClient == null || database == null) {
+            try {
+                initialize();
+            } catch (Exception e) {
+                throw new IllegalStateException("Database connection is not established", e);
+            }
         }
-
-        List<Bson> conditions = new ArrayList<>();
-        for (Map.Entry<String, Object> entry : filter.entrySet()) {
-            conditions.add(Filters.eq(entry.getKey(), entry.getValue()));
-        }
-
-        return conditions.size() == 1 ? conditions.getFirst() : Filters.and(conditions);
-    }
-
-    /**
-     * Creates a MongoDB update document from a map of field updates.
-     *
-     * @param updates A map containing the fields to update where keys are field names and values are the new values
-     * @return A Bson object representing the update operations
-     */
-    private Bson createUpdate(Map<String, Object> updates) {
-        List<Bson> updateOperations = new ArrayList<>();
-
-        for (Map.Entry<String, Object> entry : updates.entrySet()) {
-            updateOperations.add(Updates.set(entry.getKey(), entry.getValue()));
-        }
-
-        return Updates.combine(updateOperations);
     }
 }

@@ -2,6 +2,7 @@ package lol.jisz.astra.api;
 
 import lol.jisz.astra.Astra;
 import lol.jisz.astra.command.CommandManager;
+import lol.jisz.astra.database.registry.DatabaseRegistry;
 import lol.jisz.astra.task.TaskManager;
 import lol.jisz.astra.utils.ConfigManager;
 
@@ -158,7 +159,6 @@ public class Implements {
      * @param name Name of the module
      * @return Instance of the module or null if not found
      */
-    @SuppressWarnings("unchecked")
     public static Module fetchByName(String name) {
         for (Module module : modules.values()) {
             if (module.getClass().getSimpleName().equalsIgnoreCase(name)) {
@@ -223,6 +223,7 @@ public class Implements {
             case ConfigManager manager -> (R) configManager.getConfig(identifier);
             case TaskManager taskManager -> (R) taskManager.getTask(identifier);
             case CommandManager commandManager -> (R) commandManager.getCommand(identifier);
+            case DatabaseRegistry databaseRegistry -> (R) databaseRegistry.getDatabase(identifier);
 
             case ResourceProvider resourceProvider -> (R) resourceProvider.getResource(identifier);
             default -> null;

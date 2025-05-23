@@ -7,8 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public class SQLiteProvider extends AstraDatabase {
-
+public class NullDBProvider extends AstraDatabase {
     @Override
     public void initialize() throws Exception {
 
