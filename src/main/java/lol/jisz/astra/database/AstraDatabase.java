@@ -1,11 +1,14 @@
 package lol.jisz.astra.database;
 
+import lol.jisz.astra.Astra;
 import lol.jisz.astra.api.AbstractModule;
-import lol.jisz.astra.database.interfaces.StorageConstructor;
-import lol.jisz.astra.database.interfaces.StorageKey;
+import lol.jisz.astra.database.annotations.StorageConstructor;
+import lol.jisz.astra.database.annotations.StorageKey;
+import lol.jisz.astra.database.interfaces.DatabaseSerializable;
 import lol.jisz.astra.database.interfaces.StorageObject;
 import lol.jisz.astra.utils.AstraExecutor;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
@@ -13,6 +16,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Abstract base class for database implementations in Astra.
@@ -26,10 +31,17 @@ public abstract class AstraDatabase extends AbstractModule {
     
     private final Map<Class<?>, Boolean> complexObjectCache = new ConcurrentHashMap<>();
 
+    protected Astra plugin;
+    protected AnnotationProcessor annotationProcessor;
+
     @Override
     public void enable() {
         logger().info("Initializing database converters");
         registerDefaultConverters();
+
+        this.plugin = getPlugin();
+        this.annotationProcessor = new AnnotationProcessor(plugin);
+
         logger().info("Database system ready");
     }
 
@@ -405,4 +417,72 @@ public abstract class AstraDatabase extends AbstractModule {
      * @param <T>   The type of the storage object.
      */
     public abstract <T extends StorageObject> void deleteSync(Class<T> clazz, String id);
+
+    /**
+     * Gets the collection/table name for a class
+     * @param clazz The class
+     * @return The collection/table name
+     */
+    protected String getCollectionName(Class<?> clazz) {
+        return annotationProcessor.getCollectionName(clazz);
+    }
+    
+    /**
+     * Gets the ID value for an object
+     * @param object The object
+     * @return The ID value
+     */
+    protected String getIdValue(Object object) {
+        return annotationProcessor.getIdValue(object);
+    }
+    
+    /**
+     * Gets all fields for a class
+     * @param clazz The class
+     * @return List of fields
+     */
+    protected java.util.List<Field> getClassFields(Class<?> clazz) {
+        return annotationProcessor.getClassFields(clazz);
+    }
+    
+    /**
+     * Gets the database field name for a Java field
+     * @param field The Java field
+     * @return The database field name
+     */
+    protected String getDbFieldName(Field field) {
+        return annotationProcessor.getDbFieldName(field);
+    }
+    
+    /**
+     * Checks if an object is a custom serializable object
+     * @param object The object to check
+     * @return true if the object implements DatabaseSerializable
+     */
+    protected boolean isCustomSerializable(Object object) {
+        return object instanceof DatabaseSerializable;
+    }
+    
+    /**
+     * Converts an object to its database representation
+     * @param object The object to convert
+     * @return The database representation
+     */
+    protected Object toDbObject(Object object) {
+        if (object instanceof DatabaseSerializable serializable) {
+            return serializable.toDbObject();
+        }
+        return object;
+    }
+    
+    /**
+     * Updates an object from its database representation
+     * @param object The object to update
+     * @param dbObject The database representation
+     */
+    protected void fromDbObject(Object object, Object dbObject) {
+        if (object instanceof DatabaseSerializable serializable) {
+            serializable.fromDbObject(dbObject);
+        }
+    }
 }

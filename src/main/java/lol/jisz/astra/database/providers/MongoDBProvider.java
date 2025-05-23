@@ -9,6 +9,10 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.ReplaceOptions;
 import lol.jisz.astra.Astra;
 import lol.jisz.astra.database.AstraDatabase;
+import lol.jisz.astra.database.annotations.StorageCollection;
+import lol.jisz.astra.database.annotations.StorageField;
+import lol.jisz.astra.database.annotations.StorageId;
+import lol.jisz.astra.database.annotations.StorageIgnore;
 import lol.jisz.astra.database.interfaces.StorageObject;
 import lol.jisz.astra.task.AsyncAstraTask;
 import org.bson.Document;
@@ -37,7 +41,7 @@ public class MongoDBProvider extends AstraDatabase {
     private final String username;
     private final String password;
     private final Astra plugin;
-    
+
     private final Map<Class<?>, String> collectionNameCache = new ConcurrentHashMap<>();
     private final Map<Class<?>, List<Field>> classFieldsCache = new ConcurrentHashMap<>();
     private static final ReplaceOptions UPSERT_OPTIONS = new ReplaceOptions().upsert(true);
@@ -122,16 +126,45 @@ public class MongoDBProvider extends AstraDatabase {
         }
     }
 
+    /**
+     * Returns the database provider type identifier.
+     * This method identifies this provider as a MongoDB implementation
+     * when the database system needs to determine the storage backend type.
+     *
+     * @return The string "MongoDB" indicating this is a MongoDB database provider
+     */
     @Override
     public String getType() {
         return "MongoDB";
     }
 
+    /**
+     * Asynchronously finds an object in the database by its ID.
+     * This method performs a database lookup operation in a non-blocking manner
+     * by delegating to the synchronous implementation via a CompletableFuture.
+     *
+     * @param <T>   the type of object to find, must implement StorageObject
+     * @param clazz the class of the object to find, used to determine the collection
+     * @param id    the unique identifier of the object to find
+     * @return a CompletableFuture that will complete with an Optional containing the found object,
+     *         or an empty Optional if no object with the given ID exists
+     */
     @Override
     public <T extends StorageObject> CompletableFuture<Optional<T>> findById(Class<T> clazz, String id) {
         return CompletableFuture.supplyAsync(() -> findByIdSync(clazz, id));
     }
 
+    /**
+     * Synchronously finds an object in the database by its ID.
+     * This method performs a direct database lookup operation to retrieve an object
+     * with the specified ID from the appropriate collection.
+     *
+     * @param <T>   the type of object to find, must implement StorageObject
+     * @param clazz the class of the object to find, used to determine the collection
+     * @param id    the unique identifier of the object to find
+     * @return an Optional containing the found object if it exists in the database,
+     *         or an empty Optional if no object with the given ID exists
+     */
     @Override
     public <T extends StorageObject> Optional<T> findByIdSync(Class<T> clazz, String id) {
         ensureDatabaseConnected();
@@ -148,11 +181,31 @@ public class MongoDBProvider extends AstraDatabase {
         return Optional.ofNullable(object);
     }
 
+    /**
+     * Asynchronously retrieves all objects of a specified class from the database.
+     * This method performs a database query operation in a non-blocking manner
+     * by delegating to the synchronous implementation via a CompletableFuture.
+     *
+     * @param <T>   the type of objects to retrieve, must implement StorageObject
+     * @param clazz the class of the objects to retrieve, used to determine the collection
+     * @return a CompletableFuture that will complete with a Set containing all objects of the specified class
+     *         stored in the database, or an empty Set if no objects exist
+     */
     @Override
     public <T extends StorageObject> CompletableFuture<Set<T>> findAll(Class<T> clazz) {
         return CompletableFuture.supplyAsync(() -> findAllSync(clazz));
     }
 
+    /**
+     * Synchronously retrieves all objects of a specified class from the database.
+     * This method performs a direct database query operation to retrieve all objects
+     * of the specified class from the appropriate collection.
+     *
+     * @param <T>   the type of objects to retrieve, must implement StorageObject
+     * @param clazz the class of the objects to retrieve, used to determine the collection
+     * @return a Set containing all objects of the specified class stored in the database,
+     *         or an empty Set if no objects exist
+     */
     @Override
     public <T extends StorageObject> Set<T> findAllSync(Class<T> clazz) {
         ensureDatabaseConnected();
@@ -171,11 +224,30 @@ public class MongoDBProvider extends AstraDatabase {
         return results;
     }
 
+    /**
+     * Asynchronously saves an object to the database.
+     * This method performs a database save operation in a non-blocking manner
+     * by delegating to the synchronous implementation via a CompletableFuture.
+     *
+     * @param <T>    the type of object to save, must implement StorageObject
+     * @param object the object to save to the database
+     * @return a CompletableFuture that will complete when the save operation is finished
+     */
     @Override
     public <T extends StorageObject> CompletableFuture<Void> save(T object) {
         return CompletableFuture.runAsync(() -> saveSync(object));
     }
 
+    /**
+     * Synchronously saves an object to the MongoDB database.
+     * This method converts the provided object to a MongoDB document and either inserts it as a new document
+     * or replaces an existing document with the same ID. If the object's ID is null, it will be inserted
+     * as a new document.
+     *
+     * @param <T>    the type of object to save, must implement StorageObject
+     * @param object the object to save to the database, containing the data to be stored
+     * @throws IllegalStateException if the database connection is not established
+     */
     @Override
     public <T extends StorageObject> void saveSync(T object) {
         ensureDatabaseConnected();
@@ -187,14 +259,39 @@ public class MongoDBProvider extends AstraDatabase {
         String collectionName = getCollectionName(object.getClass());
         MongoCollection<Document> collection = database.getCollection(collectionName);
         
+        if (id == null) {
+            collection.insertOne(document);
+            return;
+        }
+        
         collection.replaceOne(eq("_id", id), document, UPSERT_OPTIONS);
     }
 
+    /**
+     * Asynchronously deletes an object from the database by its ID.
+     * This method performs a database deletion operation in a non-blocking manner
+     * by delegating to the synchronous implementation via a CompletableFuture.
+     *
+     * @param <T>   the type of object to delete, must implement StorageObject
+     * @param clazz the class of the object to delete, used to determine the collection
+     * @param id    the unique identifier of the object to delete
+     * @return a CompletableFuture that will complete when the deletion operation is finished
+     */
     @Override
     public <T extends StorageObject> CompletableFuture<Void> delete(Class<T> clazz, String id) {
         return CompletableFuture.runAsync(() -> deleteSync(clazz, id));
     }
 
+    /**
+     * Synchronously deletes an object from the MongoDB database by its ID.
+     * This method performs a direct database deletion operation to remove an object
+     * with the specified ID from the appropriate collection.
+     *
+     * @param <T>   the type of object to delete, must implement StorageObject
+     * @param clazz the class of the object to delete, used to determine the collection
+     * @param id    the unique identifier of the object to delete
+     * @throws IllegalStateException if the database connection is not established
+     */
     @Override
     public <T extends StorageObject> void deleteSync(Class<T> clazz, String id) {
         ensureDatabaseConnected();
@@ -204,8 +301,19 @@ public class MongoDBProvider extends AstraDatabase {
         collection.deleteOne(eq("_id", id));
     }
 
-    private String getCollectionName(Class<?> clazz) {
+    /**
+     * Gets the collection name for a class, checking for @Collection annotation first,
+     * then static method, then defaulting to lowercase class name
+     */
+    public String getCollectionName(Class<?> clazz) {
         return collectionNameCache.computeIfAbsent(clazz, c -> {
+            if (c.isAnnotationPresent(StorageCollection.class)) {
+                String name = c.getAnnotation(StorageCollection.class).value();
+                if (!name.isEmpty()) {
+                    return name;
+                }
+            }
+
             try {
                 Method method = c.getDeclaredMethod("getCollectionName");
                 method.setAccessible(true);
@@ -214,37 +322,83 @@ public class MongoDBProvider extends AstraDatabase {
                     return (String) result;
                 }
             } catch (Exception ignored) {
-                plugin.logger().error("Failed to get collection name for class: " + c.getName());
+                // Ignorar excepciones, continuar con el siguiente paso
             }
+
             return c.getSimpleName().toLowerCase();
         });
     }
 
+    /**
+     * Gets the field name for database storage, checking for @Field and @Id annotations
+     */
+    private String getFieldName(Field field) {
+        if (field.isAnnotationPresent(StorageField.class)) {
+            StorageField annotation = field.getAnnotation(StorageField.class);
+            String customName = annotation.name();
+            if (!customName.isEmpty()) {
+                return customName;
+            }
+        }
+
+        if (field.isAnnotationPresent(StorageId.class)) {
+            return "_id";
+        }
+
+        return field.getName();
+    }
+
+    /**
+     * Converts a Java object into a MongoDB Document.
+     * This method recursively processes all fields of the given object and transforms them
+     * into a format suitable for MongoDB storage. It handles nested objects, collections,
+     * maps, arrays, and primitive types.
+     *
+     * @param obj The Java object to convert to a MongoDB Document. This can be any object
+     *            whose fields should be stored in the database.
+     * @return A MongoDB Document containing all the non-null field values from the object.
+     *         If the object implements StorageObject, its ID will be stored as "_id" in the document.
+     */
     private Document createDocumentFromObject(Object obj) {
         Document document = new Document();
         Class<?> objClass = obj.getClass();
-        
+
         List<Field> fields = getClassFields(objClass);
-        
+
         for (Field field : fields) {
-            String fieldName = field.getName();
-            
             try {
                 Object value = field.get(obj);
-                
+
                 if (value == null) {
                     continue;
                 }
-                
+
+                String fieldName = getFieldName(field);
+
                 processFieldValue(document, fieldName, value);
             } catch (IllegalAccessException e) {
-                plugin.logger().error("Failed to access field: " + fieldName, e);
+                plugin.logger().error("Failed to access field: " + field.getName(), e);
             }
         }
-        
+
+        if (obj instanceof StorageObject storageObject) {
+            String id = storageObject.getId();
+            if (id != null) {
+                document.put("_id", id);
+            }
+        }
+
         return document;
     }
-    
+
+    /**
+     * Processes a field value and adds it to the document.
+     * This method handles nested objects, collections, maps, arrays, and primitive types.
+     *
+     * @param document The MongoDB Document to which the field value will be added.
+     * @param fieldName The name of the field in the document.
+     * @param value The value of the field to be processed.
+     */
     private void processFieldValue(Document document, String fieldName, Object value) {
         if (value instanceof StorageObject) {
             document.put(fieldName, createDocumentFromObject(value));
@@ -276,7 +430,15 @@ public class MongoDBProvider extends AstraDatabase {
             document.put(fieldName, value);
         }
     }
-    
+
+    /**
+     * Processes an array value and adds it to the document.
+     * This method handles arrays of objects, including nested StorageObjects.
+     *
+     * @param document The MongoDB Document to which the array value will be added.
+     * @param fieldName The name of the field in the document.
+     * @param array The array value to be processed.
+     */
     private void processArrayValue(Document document, String fieldName, Object array) {
         int length = Array.getLength(array);
         List<Object> list = new ArrayList<>(length);
@@ -291,48 +453,69 @@ public class MongoDBProvider extends AstraDatabase {
         document.put(fieldName, list);
     }
 
-    private List<Field> getClassFields(Class<?> clazz) {
+    /**
+     * Gets all fields from a class, including inherited fields
+     * and respecting @Ignore annotation
+     */
+    public List<Field> getClassFields(Class<?> clazz) {
         return classFieldsCache.computeIfAbsent(clazz, this::getAllFields);
     }
 
+    /**
+     * Gets all fields from a class hierarchy, respecting @Ignore annotation
+     */
     private List<Field> getAllFields(Class<?> clazz) {
         List<Field> fields = new ArrayList<>();
         Class<?> currentClass = clazz;
-        
+
         while (currentClass != null && currentClass != Object.class) {
             for (Field field : currentClass.getDeclaredFields()) {
-                if (!Modifier.isStatic(field.getModifiers()) && !Modifier.isTransient(field.getModifiers())) {
+                if (!Modifier.isStatic(field.getModifiers()) &&
+                        !Modifier.isTransient(field.getModifiers()) &&
+                        !field.isAnnotationPresent(StorageIgnore.class)) {
+
                     field.setAccessible(true);
                     fields.add(field);
                 }
             }
             currentClass = currentClass.getSuperclass();
         }
-        
+
         return fields;
     }
 
+    /**
+     * Instantiates an object of the specified class and populates its fields from a MongoDB Document.
+     * This method uses reflection to create an instance of the class and set its fields based on the
+     * values in the provided document. It handles nested objects, collections, maps, and arrays.
+     *
+     * @param <T> The type of object to instantiate
+     * @param clazz The class of the object to instantiate
+     * @param document The MongoDB Document containing field values
+     * @return An instance of the specified class with fields populated from the document,
+     *         or null if instantiation fails
+     */
     private <T> T instantiateObject(Class<T> clazz, Document document) {
         try {
             Constructor<T> constructor = clazz.getDeclaredConstructor();
             constructor.setAccessible(true);
             T instance = constructor.newInstance();
-            
+
             List<Field> fields = getClassFields(clazz);
-            
+
             for (Field field : fields) {
-                String fieldName = field.getName();
-                
+                String fieldName = getFieldName(field);
+
                 if (!document.containsKey(fieldName)) {
                     continue;
                 }
-                
+
                 Object value = document.get(fieldName);
-                
+
                 if (value == null) {
                     continue;
                 }
-                
+
                 Class<?> fieldType = field.getType();
                 setFieldValue(instance, field, fieldType, value);
             }
@@ -342,7 +525,17 @@ public class MongoDBProvider extends AstraDatabase {
             return null;
         }
     }
-    
+
+    /**
+     * Sets the value of a field in the given instance.
+     * This method handles nested objects, collections, maps, and arrays.
+     *
+     * @param <T> The type of object to set the field value for
+     * @param instance The object instance to set the field value on
+     * @param field The field to set the value for
+     * @param fieldType The type of the field
+     * @param value The value to set in the field
+     */
     private <T> void setFieldValue(T instance, Field field, Class<?> fieldType, Object value) throws IllegalAccessException {
         try {
             switch (value) {
@@ -394,8 +587,9 @@ public class MongoDBProvider extends AstraDatabase {
                                 field.set(instance, value);
                             }
                         }
+                    } else {
+                        field.set(instance, value);
                     }
-                    field.set(instance, value);
                 }
             }
         } catch (IllegalAccessException e) {

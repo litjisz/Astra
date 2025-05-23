@@ -1,4 +1,4 @@
-package lol.jisz.astra.database.interfaces;
+package lol.jisz.astra.database.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
