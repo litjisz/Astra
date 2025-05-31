@@ -70,7 +70,6 @@ public abstract class Astra extends JavaPlugin {
 
     private void initAstra() {
         try {
-            Implements.init(this);
             pluginHelper = new PluginHelper(this);
 
             if (pluginHelper != null) {

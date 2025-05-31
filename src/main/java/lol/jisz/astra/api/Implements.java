@@ -5,6 +5,7 @@ import lol.jisz.astra.command.CommandManager;
 import lol.jisz.astra.database.registry.DatabaseRegistry;
 import lol.jisz.astra.task.TaskManager;
 import lol.jisz.astra.utils.ConfigManager;
+import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.*;
 
@@ -221,6 +222,7 @@ public class Implements {
         return switch (module) {
             case null -> null;
             case ConfigManager manager -> (R) configManager.getConfig(identifier);
+            case FileConfiguration config -> (R) configManager.getConfig(identifier);
             case TaskManager taskManager -> (R) taskManager.getTask(identifier);
             case CommandManager commandManager -> (R) commandManager.getCommand(identifier);
             case DatabaseRegistry databaseRegistry -> (R) databaseRegistry.getDatabase(identifier);

@@ -1,10 +1,12 @@
 package lol.jisz.astra.utils;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -57,6 +59,37 @@ public class Text {
     public static List<String> colorize(List<String> texts) {
         return texts.stream()
                 .map(Text::colorize)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Translates a text with placeholders and color codes for a specific player.
+     * This method uses PlaceholderAPI to replace placeholders and then colorizes the text.
+     *
+     * @param text Text with placeholders and color codes
+     * @param player Player for whom the placeholders should be replaced
+     * @return Translated and colorized text
+     */
+    public static String translate(String text, Player player) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+
+        text = PlaceholderAPI.setPlaceholders(player, text);
+        return colorize(text);
+    }
+
+    /**
+     * Translates a list of texts with placeholders and color codes for a specific player.
+     * Each text in the list is processed individually.
+     *
+     * @param texts List of texts with placeholders and color codes
+     * @param player Player for whom the placeholders should be replaced
+     * @return List of translated and colorized texts
+     */
+    public static List<String> translate(List<String> texts, Player player) {
+        return texts.stream()
+                .map(text -> translate(text, player))
                 .collect(Collectors.toList());
     }
 
