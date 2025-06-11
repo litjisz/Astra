@@ -1,11 +1,12 @@
 package lol.jisz.astra.utils;
 
-import me.clip.placeholderapi.PlaceholderAPI;
+import lol.jisz.astra.api.Implements;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -21,6 +22,8 @@ public class Text {
             .hexColors()
             .build();
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static boolean placeholderAPIChecked = false;
+    private static boolean placeholderAPIAvailable = false;
 
     /**
      * Colors a text using Minecraft color codes (with & as a prefix).
@@ -63,8 +66,22 @@ public class Text {
     }
 
     /**
+     * Checks if PlaceholderAPI is available on the server.
+     * 
+     * @return true if PlaceholderAPI is available, false otherwise
+     */
+    private static boolean isPlaceholderAPIAvailable() {
+        if (!placeholderAPIChecked) {
+            placeholderAPIAvailable = Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null;
+            placeholderAPIChecked = true;
+        }
+        return placeholderAPIAvailable;
+    }
+
+    /**
      * Translates a text with placeholders and color codes for a specific player.
-     * This method uses PlaceholderAPI to replace placeholders and then colorizes the text.
+     * This method uses PlaceholderAPI to replace placeholders if available, and then colorizes the text.
+     * If PlaceholderAPI is not available, it will just colorize the text.
      *
      * @param text Text with placeholders and color codes
      * @param player Player for whom the placeholders should be replaced
@@ -75,7 +92,17 @@ public class Text {
             return "";
         }
 
-        text = PlaceholderAPI.setPlaceholders(player, text);
+        if (isPlaceholderAPIAvailable() && player != null) {
+            try {
+                Class<?> papiClass = Class.forName("me.clip.placeholderapi.PlaceholderAPI");
+                text = (String) papiClass.getMethod("setPlaceholders", Player.class, String.class)
+                        .invoke(null, player, text);
+            } catch (Exception e) {
+                Implements.getPlugin().logger().error("Failed to use PlaceholderAPI for player " + player.getName() + ": " + e.getMessage());
+                // If any error occurs, just continue with the original text
+            }
+        }
+        
         return colorize(text);
     }
 
