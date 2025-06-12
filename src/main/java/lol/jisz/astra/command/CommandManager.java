@@ -1,6 +1,8 @@
 package lol.jisz.astra.command;
 
 import lol.jisz.astra.Astra;
+import lol.jisz.astra.command.adapter.CommandExecutorAdapter;
+import lol.jisz.astra.command.adapter.TabCompleterAdapter;
 import lol.jisz.astra.utils.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
@@ -56,6 +58,9 @@ public class CommandManager {
             if (commandMap != null) {
                 org.bukkit.command.PluginCommand pluginCommand = plugin.getServer().getPluginCommand(command.getName());
                 
+                CommandExecutorAdapter executorAdapter = new CommandExecutorAdapter(command);
+                TabCompleterAdapter completerAdapter = new TabCompleterAdapter(command);
+                
                 if (pluginCommand == null) {
                     try {
                         Constructor<org.bukkit.command.PluginCommand> constructor =
@@ -72,8 +77,8 @@ public class CommandManager {
                             pluginCommand.setPermission(command.getPermission());
                         }
                         
-                        pluginCommand.setExecutor(command);
-                        pluginCommand.setTabCompleter(command);
+                        pluginCommand.setExecutor(executorAdapter);
+                        pluginCommand.setTabCompleter(completerAdapter);
                         
                         commandMap.register(plugin.getName().toLowerCase(), pluginCommand);
                         commands.add(command);
@@ -85,8 +90,8 @@ public class CommandManager {
                         logger.error("Failed to create plugin command for " + command.getName(), e);
                     }
                 } else {
-                    pluginCommand.setExecutor(command);
-                    pluginCommand.setTabCompleter(command);
+                    pluginCommand.setExecutor(executorAdapter);
+                    pluginCommand.setTabCompleter(completerAdapter);
                     commands.add(command);
 
                     if (logger.isDebugMode()) {
