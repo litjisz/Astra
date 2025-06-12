@@ -35,27 +35,6 @@ public class PluginHelper {
     }
 
     /**
-     * Loads the plugin by initializing the module system, command system, and loading configuration.
-     * This method should be called during the plugin's enable phase.
-     * Any exceptions during loading are caught and logged.
-     */
-    public void load() {
-        try {
-            initModuleSystem();
-            initCommandSystem();
-            initTaskSystem();
-            loadConfig();
-
-            if (logger.isDebugMode()) {
-                logger.info("PluginHelper loaded successfully");
-            }
-
-        } catch (Exception e) {
-            logger.error("Error loading the plugin", e);
-        }
-    }
-
-    /**
      * Unloads the plugin by disabling all implementations and saving configuration.
      * This method should be called during the plugin's disable phase.
      * Any exceptions during unloading are caught and logged.
@@ -99,35 +78,6 @@ public class PluginHelper {
     }
 
     /**
-     * Initializes the module system by setting up the Implements framework.
-     * This is a private helper method called during the load process.
-     */
-    private void initModuleSystem() {
-        Implements.init(plugin);
-    }
-
-    /**
-     * Initializes the command system by creating a new CommandManager instance.
-     * This is a private helper method called during the load process.
-     * Any exceptions during initialization are caught and logged.
-     */
-    private void initCommandSystem() {
-        try {
-            commandManager = new CommandManager(plugin);
-        } catch (Exception e) {
-            logger.error("Error initializing the command system", e);
-        }
-    }
-
-    /**
-     * Initializes the task system by registering the TaskManager.
-     * This is a private helper method called during the load process.
-     */
-    private void initTaskSystem() {
-        Implements.register(new TaskManager());
-    }
-
-    /**
      * Loads the plugin configuration by ensuring default configuration exists.
      * This is a private helper method called during the load process.
      */
@@ -155,7 +105,31 @@ public class PluginHelper {
      * Fluent API for plugin registration and initialization operations.
      */
     public class PluginRegistrar {
-        
+
+        public PluginRegistrar initModuleSystem() {
+            try {
+                Implements.init(plugin);
+                if (logger.isDebugMode()) {
+                    logger.info("Module system initialized successfully");
+                }
+            } catch (Exception e) {
+                logger.error("Failed to initialize module system", e);
+            }
+            return this;
+        }
+
+        public PluginRegistrar initTaskSystem() {
+            try {
+                Implements.register(new TaskManager());
+                if (logger.isDebugMode()) {
+                    logger.info("Task system initialized successfully");
+                }
+            } catch (Exception e) {
+                logger.error("Failed to initialize task system", e);
+            }
+            return this;
+        }
+
         /**
          * Registers a database with the specified type.
          * @param type The type of database to register

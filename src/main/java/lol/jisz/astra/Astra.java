@@ -31,25 +31,9 @@ public abstract class Astra extends JavaPlugin {
             instance = this;
             logger = new Logger(this);
 
-            if (getResource("config.yml") != null) {
-                saveDefaultConfig();
-            } else {
-                if (logger.isDebugMode()) {
-                    getLogger().warning("No config.yml found. Default configuration will not be loaded.");
-                }
-            }
-
             initAstra();
-
-            if (pluginHelper != null) {
-                pluginHelper.load();
-            } else {
-                if (logger.isDebugMode()) {
-                    getLogger().warning("PluginHelper could not be initialized. Plugin will not function correctly.");
-                }
-            }
-
             onInitialize();
+
             initialized = true;
 
             if (logger.isDebugMode()) {
