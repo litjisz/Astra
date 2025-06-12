@@ -1,13 +1,14 @@
 package lol.jisz.astra.utils;
 
 import lol.jisz.astra.Astra;
-import lol.jisz.astra.api.AutoRegisterModule;
 import lol.jisz.astra.api.Implements;
+import lol.jisz.astra.api.annotations.AutoRegisterModule;
+import lol.jisz.astra.api.interfaces.Module;
 import lol.jisz.astra.command.AutoRegisterCommand;
 import lol.jisz.astra.command.CommandBase;
 import lol.jisz.astra.event.AutoRegisterListener;
-import lol.jisz.astra.task.AutoRegisterTask;
 import lol.jisz.astra.task.AsyncAstraTask;
+import lol.jisz.astra.task.AutoRegisterTask;
 import lol.jisz.astra.task.SyncAstraTask;
 import lol.jisz.astra.task.TaskPriority;
 import org.bukkit.event.Listener;
@@ -15,11 +16,7 @@ import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -74,7 +71,7 @@ public class ClassScanner {
         List<Class<?>> filteredModules = new ArrayList<>();
 
         for (Class<?> clazz : moduleClasses) {
-            if (lol.jisz.astra.api.Module.class.isAssignableFrom(clazz) &&
+            if (Module.class.isAssignableFrom(clazz) &&
                     !clazz.isInterface() &&
                     !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers())) {
                 filteredModules.add(clazz);
@@ -93,12 +90,12 @@ public class ClassScanner {
 
                 try {
                     constructor = clazz.getConstructor(Astra.class);
-                    lol.jisz.astra.api.Module module = (lol.jisz.astra.api.Module) constructor.newInstance(plugin);
+                    Module module = (Module) constructor.newInstance(plugin);
                     Implements.register(module);
                     plugin.logger().info("Module automatically registered: " + clazz.getSimpleName());
                 } catch (NoSuchMethodException e) {
                     constructor = clazz.getConstructor();
-                    lol.jisz.astra.api.Module module = (lol.jisz.astra.api.Module) constructor.newInstance();
+                    Module module = (Module) constructor.newInstance();
                     Implements.register(module);
                     plugin.logger().info("Module automatically registered: " + clazz.getSimpleName());
                 }

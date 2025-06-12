@@ -1,4 +1,4 @@
-package lol.jisz.astra.api;
+package lol.jisz.astra.api.interfaces;
 
 /**
  * Interface for listening to module lifecycle events

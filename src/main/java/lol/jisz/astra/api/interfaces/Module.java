@@ -1,4 +1,4 @@
-package lol.jisz.astra.api;
+package lol.jisz.astra.api.interfaces;
 
 /**
  * Represents a module within the Astra system.

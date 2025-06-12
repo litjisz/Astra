@@ -1,6 +1,7 @@
 package lol.jisz.astra.api;
 
 import lol.jisz.astra.Astra;
+import lol.jisz.astra.api.interfaces.Module;
 import lol.jisz.astra.utils.ConfigManager;
 import lol.jisz.astra.utils.Logger;
 

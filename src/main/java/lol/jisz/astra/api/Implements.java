@@ -1,6 +1,11 @@
 package lol.jisz.astra.api;
 
 import lol.jisz.astra.Astra;
+import lol.jisz.astra.api.annotations.DependsOn;
+import lol.jisz.astra.api.interfaces.Module;
+import lol.jisz.astra.api.interfaces.ModuleLifecycleListener;
+import lol.jisz.astra.api.interfaces.PrioritizedModule;
+import lol.jisz.astra.api.interfaces.ResourceProvider;
 import lol.jisz.astra.command.CommandManager;
 import lol.jisz.astra.database.registry.DatabaseRegistry;
 import lol.jisz.astra.task.TaskManager;
@@ -17,7 +22,7 @@ public class Implements {
     private static ConfigManager configManager;
 
     // TODO: As soon as AstraMap is tested and 100% thread safe it will be implemented here.
-    private static final Map<Class<? extends Module>, Module> modules = new ConcurrentHashMap<>();
+    private static final Map<Class<? extends lol.jisz.astra.api.interfaces.Module>, lol.jisz.astra.api.interfaces.Module> modules = new ConcurrentHashMap<>();
     private static final List<ModuleLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
 
 
@@ -53,7 +58,7 @@ public class Implements {
      * @return Instance of the registered module
      */
     @SuppressWarnings("all")
-    public static <T extends Module> T register(T module) {
+    public static <T extends lol.jisz.astra.api.interfaces.Module> T register(T module) {
         modules.put(module.getClass(), module);
         
         for (ModuleLifecycleListener listener : lifecycleListeners) {
@@ -78,9 +83,9 @@ public class Implements {
      * @throws DependencyException if a dependency is not registered
      */
     @SuppressWarnings("all")
-    public static <T extends Module> T registerWithDependencies(T module, Class<? extends Module>... dependencies) 
+    public static <T extends lol.jisz.astra.api.interfaces.Module> T registerWithDependencies(T module, Class<? extends lol.jisz.astra.api.interfaces.Module>... dependencies)
             throws DependencyException {
-        for (Class<? extends Module> dependency : dependencies) {
+        for (Class<? extends lol.jisz.astra.api.interfaces.Module> dependency : dependencies) {
             if (!isRegistered(dependency)) {
                 throw new DependencyException("Missing dependency: " + dependency.getSimpleName() + 
                                              " for module: " + module.getClass().getSimpleName());
@@ -100,14 +105,14 @@ public class Implements {
      * @throws DependencyException if a dependency is not registered
      */
     @SuppressWarnings("all")
-    public static <T extends Module> T registerWithAnnotatedDependencies(T module) throws DependencyException {
+    public static <T extends lol.jisz.astra.api.interfaces.Module> T registerWithAnnotatedDependencies(T module) throws DependencyException {
         Class<?> moduleClass = module.getClass();
         
         if (moduleClass.isAnnotationPresent(DependsOn.class)) {
             DependsOn dependsOn = moduleClass.getAnnotation(DependsOn.class);
-            Class<? extends Module>[] dependencies = dependsOn.value();
+            Class<? extends lol.jisz.astra.api.interfaces.Module>[] dependencies = dependsOn.value();
             
-            for (Class<? extends Module> dependency : dependencies) {
+            for (Class<? extends lol.jisz.astra.api.interfaces.Module> dependency : dependencies) {
                 if (!isRegistered(dependency)) {
                     throw new DependencyException("Missing dependency: " + dependency.getSimpleName() + 
                                                  " for module: " + moduleClass.getSimpleName());
@@ -125,7 +130,7 @@ public class Implements {
      * @return Instance of the registered module
      */
     @SuppressWarnings("all")
-    public static <T extends Module> T registerOnly(T module) {
+    public static <T extends lol.jisz.astra.api.interfaces.Module> T registerOnly(T module) {
         modules.put(module.getClass(), module);
 
         for (ModuleLifecycleListener listener : lifecycleListeners) {
@@ -139,8 +144,8 @@ public class Implements {
      * Registers a list of modules and enables them in order of dependencies
      * @param modulesToRegister List of modules to register
      */
-    public static void registerAndEnableInOrder(List<Module> modulesToRegister) {
-        for (Module module : modulesToRegister) {
+    public static void registerAndEnableInOrder(List<lol.jisz.astra.api.interfaces.Module> modulesToRegister) {
+        for (lol.jisz.astra.api.interfaces.Module module : modulesToRegister) {
             registerOnly(module);
         }
 
@@ -163,8 +168,8 @@ public class Implements {
      * @param name Name of the module
      * @return Instance of the module or null if not found
      */
-    public static Module fetchByName(String name) {
-        for (Module module : modules.values()) {
+    public static lol.jisz.astra.api.interfaces.Module fetchByName(String name) {
+        for (lol.jisz.astra.api.interfaces.Module module : modules.values()) {
             if (module.getClass().getSimpleName().equalsIgnoreCase(name)) {
                 return module;
             }
@@ -181,7 +186,7 @@ public class Implements {
     @SuppressWarnings("unchecked")
     public static <T> List<T> fetchAllImplementing(Class<T> interfaceClass) {
         List<T> result = new ArrayList<>();
-        for (Module module : modules.values()) {
+        for (lol.jisz.astra.api.interfaces.Module module : modules.values()) {
             if (interfaceClass.isAssignableFrom(module.getClass())) {
                 result.add((T) module);
             }
@@ -202,7 +207,7 @@ public class Implements {
      */
     @SuppressWarnings("unchecked")
     public static <T> T fetchImplementing(Class<T> interfaceClass) {
-        for (Module module : modules.values()) {
+        for (lol.jisz.astra.api.interfaces.Module module : modules.values()) {
             if (interfaceClass.isAssignableFrom(module.getClass())) {
                 return (T) module;
             }
@@ -240,7 +245,7 @@ public class Implements {
      * If a module fails to enable, an error is logged but the process continues for other modules.
      */
     public static void enableAll() {
-        for (Module module : modules.values()) {
+        for (lol.jisz.astra.api.interfaces.Module module : modules.values()) {
             try {
                 module.enable();
                 plugin.logger().info("Module enabled: " + module.getClass().getSimpleName());
@@ -255,7 +260,7 @@ public class Implements {
      * Modules with higher priority values are enabled first.
      */
     public static void enableAllWithPriority() {
-        List<Module> sortedModules = new ArrayList<>(modules.values());
+        List<lol.jisz.astra.api.interfaces.Module> sortedModules = new ArrayList<>(modules.values());
         
         sortedModules.sort((m1, m2) -> {
             int p1 = (m1 instanceof PrioritizedModule) ? ((PrioritizedModule) m1).getPriority() : 0;
@@ -263,7 +268,7 @@ public class Implements {
             return Integer.compare(p2, p1);
         });
         
-        for (Module module : sortedModules) {
+        for (lol.jisz.astra.api.interfaces.Module module : sortedModules) {
             try {
                 module.enable();
                 plugin.logger().info("Module enabled: " + module.getClass().getSimpleName() + 
@@ -281,8 +286,8 @@ public class Implements {
      * If a module has unsatisfied dependencies, it will not be enabled.
      */
     public static void enableAllWithDependencies() {
-        Set<Class<? extends Module>> enabled = new HashSet<>();
-        List<Module> sortedModules = new ArrayList<>(modules.values());
+        Set<Class<? extends lol.jisz.astra.api.interfaces.Module>> enabled = new HashSet<>();
+        List<lol.jisz.astra.api.interfaces.Module> sortedModules = new ArrayList<>(modules.values());
 
         sortedModules.sort((m1, m2) -> {
             int p1 = (m1 instanceof PrioritizedModule) ? ((PrioritizedModule) m1).getPriority() : 0;
@@ -293,7 +298,7 @@ public class Implements {
         boolean progress;
         do {
             progress = false;
-            for (Module module : sortedModules) {
+            for (lol.jisz.astra.api.interfaces.Module module : sortedModules) {
                 if (enabled.contains(module.getClass())) {
                     continue;
                 }
@@ -302,7 +307,7 @@ public class Implements {
 
                 if (module.getClass().isAnnotationPresent(DependsOn.class)) {
                     DependsOn dependsOn = module.getClass().getAnnotation(DependsOn.class);
-                    for (Class<? extends Module> dependency : dependsOn.value()) {
+                    for (Class<? extends lol.jisz.astra.api.interfaces.Module> dependency : dependsOn.value()) {
                         if (!enabled.contains(dependency)) {
                             dependenciesMet = false;
                             break;
@@ -329,7 +334,7 @@ public class Implements {
         } while (progress && enabled.size() < modules.size());
 
         if (enabled.size() < modules.size()) {
-            for (Module module : modules.values()) {
+            for (lol.jisz.astra.api.interfaces.Module module : modules.values()) {
                 if (!enabled.contains(module.getClass())) {
                     plugin.logger().error("The module could not be enabled due to unsatisfied dependencies: "
                             + module.getClass().getSimpleName());
@@ -346,9 +351,9 @@ public class Implements {
      * @param recursionStack Current path of module classes
      * @return true if a circular dependency is detected, false otherwise
      */
-    private static boolean detectCircularDependency(Class<? extends Module> moduleClass,
-                                                    Set<Class<? extends Module>> visited,
-                                                    Set<Class<? extends Module>> recursionStack) {
+    private static boolean detectCircularDependency(Class<? extends lol.jisz.astra.api.interfaces.Module> moduleClass,
+                                                    Set<Class<? extends lol.jisz.astra.api.interfaces.Module>> visited,
+                                                    Set<Class<? extends lol.jisz.astra.api.interfaces.Module>> recursionStack) {
         if (recursionStack.contains(moduleClass)) {
             return true;
         }
@@ -362,7 +367,7 @@ public class Implements {
 
         if (moduleClass.isAnnotationPresent(DependsOn.class)) {
             DependsOn dependsOn = moduleClass.getAnnotation(DependsOn.class);
-            for (Class<? extends Module> dependency : dependsOn.value()) {
+            for (Class<? extends lol.jisz.astra.api.interfaces.Module> dependency : dependsOn.value()) {
                 if (detectCircularDependency(dependency, visited, recursionStack)) {
                     return true;
                 }
@@ -379,7 +384,7 @@ public class Implements {
      * If a module fails to disable, an error is logged but the process continues for other modules.
      */
     public static void disableAll() {
-        for (Module module : modules.values()) {
+        for (lol.jisz.astra.api.interfaces.Module module : modules.values()) {
             try {
                 module.disable();
                 
@@ -400,7 +405,7 @@ public class Implements {
      * If a module fails to reload, an error is logged but the process continues for other modules.
      */
     public static void reloadAll() {
-        for (Module module : modules.values()) {
+        for (lol.jisz.astra.api.interfaces.Module module : modules.values()) {
             try {
                 module.reload();
                 
@@ -420,7 +425,7 @@ public class Implements {
      * @param clazz Module class
      * @return true if the module is registered, false otherwise
      */
-    public static boolean isRegistered(Class<? extends Module> clazz) {
+    public static boolean isRegistered(Class<? extends lol.jisz.astra.api.interfaces.Module> clazz) {
         return modules.containsKey(clazz);
     }
 
@@ -445,8 +450,8 @@ public class Implements {
      * @param clazz Module class
      * @return true if the module was enabled, false if it wasn't registered
      */
-    public static boolean enable(Class<? extends Module> clazz) {
-        Module module = modules.get(clazz);
+    public static boolean enable(Class<? extends lol.jisz.astra.api.interfaces.Module> clazz) {
+        lol.jisz.astra.api.interfaces.Module module = modules.get(clazz);
         if (module != null) {
             try {
                 module.enable();
@@ -469,8 +474,8 @@ public class Implements {
      * @param clazz Module class
      * @return true if the module was disabled, false if it wasn't registered
      */
-    public static boolean disable(Class<? extends Module> clazz) {
-        Module module = modules.get(clazz);
+    public static boolean disable(Class<? extends lol.jisz.astra.api.interfaces.Module> clazz) {
+        lol.jisz.astra.api.interfaces.Module module = modules.get(clazz);
         if (module != null) {
             try {
                 module.disable();
@@ -493,7 +498,7 @@ public class Implements {
      * @param clazz Module class
      * @return true if the module was reloaded, false if it wasn't registered
      */
-    public static boolean reload(Class<? extends Module> clazz) {
+    public static boolean reload(Class<? extends lol.jisz.astra.api.interfaces.Module> clazz) {
         Module module = modules.get(clazz);
         if (module != null) {
             try {

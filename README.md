@@ -85,7 +85,7 @@ public class MyPlugin extends Astra {
 package com.example.myplugin.modules;
 
 import lol.jisz.astra.api.AbstractModule;
-import lol.jisz.astra.api.AutoRegisterModule;
+import lol.jisz.astra.api.annotations.AutoRegisterModule;
 
 @AutoRegisterModule
 public class ExampleModule extends AbstractModule {
@@ -93,12 +93,12 @@ public class ExampleModule extends AbstractModule {
     public void onEnable() {
         logger().info("ExampleModule enabled!");
     }
-    
+
     @Override
     public void onDisable() {
         logger().info("ExampleModule disabled!");
     }
-    
+
     public void doSomething() {
         // Module functionality
     }

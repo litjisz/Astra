@@ -16,8 +16,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
-import java.util.Optional;
-import java.util.Set;
 
 /**
  * Abstract base class for database implementations in Astra.

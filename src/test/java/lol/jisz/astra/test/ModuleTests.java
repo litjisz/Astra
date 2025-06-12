@@ -1,9 +1,9 @@
 package lol.jisz.astra.test;
 
 import lol.jisz.astra.Astra;
-import lol.jisz.astra.api.AutoRegisterModule;
+import lol.jisz.astra.api.annotations.AutoRegisterModule;
 import lol.jisz.astra.api.Implements;
-import lol.jisz.astra.api.Module;
+import lol.jisz.astra.api.interfaces.Module;
 import lol.jisz.astra.utils.Logger;
 
 /**

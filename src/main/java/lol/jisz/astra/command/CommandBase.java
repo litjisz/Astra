@@ -4,7 +4,8 @@ import lol.jisz.astra.Astra;
 import lol.jisz.astra.command.sender.Sender;
 import lol.jisz.astra.command.sender.SenderCommandExecutor;
 import lol.jisz.astra.command.sender.SenderTabCompleter;
-import org.bukkit.command.*;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandMap;
 
 import java.util.ArrayList;
 import java.util.List;

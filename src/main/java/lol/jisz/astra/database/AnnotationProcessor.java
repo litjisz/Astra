@@ -8,7 +8,9 @@ import lol.jisz.astra.database.annotations.StorageIgnore;
 import lol.jisz.astra.database.interfaces.StorageObject;
 
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**

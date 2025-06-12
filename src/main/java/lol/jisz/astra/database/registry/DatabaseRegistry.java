@@ -6,7 +6,8 @@ import lol.jisz.astra.database.AstraDatabase;
 import lol.jisz.astra.database.providers.DatabaseType;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
