@@ -8,14 +8,17 @@ import lol.jisz.astra.utils.ConfigManager;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Implements {
 
     private static Astra plugin;
     private static ConfigManager configManager;
 
-    private static final Map<Class<? extends Module>, Module> modules = new HashMap<>();
-    private static final List<ModuleLifecycleListener> lifecycleListeners = new ArrayList<>();
+    // TODO: As soon as AstraMap is tested and 100% thread safe it will be implemented here.
+    private static final Map<Class<? extends Module>, Module> modules = new ConcurrentHashMap<>();
+    private static final List<ModuleLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
 
 
     /**
@@ -220,7 +223,6 @@ public class Implements {
     public static <T, R> R fetch(Class<T> clazz, String identifier) {
         T module = fetch(clazz);
         return switch (module) {
-            case null -> null;
             case ConfigManager manager -> (R) configManager.getConfig(identifier);
             case FileConfiguration config -> (R) configManager.getConfig(identifier);
             case TaskManager taskManager -> (R) taskManager.getTask(identifier);
@@ -228,7 +230,7 @@ public class Implements {
             case DatabaseRegistry databaseRegistry -> (R) databaseRegistry.getDatabase(identifier);
 
             case ResourceProvider resourceProvider -> (R) resourceProvider.getResource(identifier);
-            default -> null;
+            case null, default -> null;
         };
     }
 
@@ -341,21 +343,13 @@ public class Implements {
      * This method uses a depth-first search algorithm to check for cycles in the dependency graph.
      * @param moduleClass The module class to check
      * @param visited Set of visited module classes
-     * @param path Current path of module classes
+     * @param recursionStack Current path of module classes
      * @return true if a circular dependency is detected, false otherwise
      */
     private static boolean detectCircularDependency(Class<? extends Module> moduleClass,
                                                     Set<Class<? extends Module>> visited,
-                                                    List<Class<? extends Module>> path) {
-        if (path.contains(moduleClass)) {
-            int startIndex = path.indexOf(moduleClass);
-            List<String> cycle = new ArrayList<>();
-            for (int i = startIndex; i < path.size(); i++) {
-                cycle.add(path.get(i).getSimpleName());
-            }
-            cycle.add(moduleClass.getSimpleName());
-
-            plugin.logger().error("Circular dependency detected: " + String.join(" -> ", cycle));
+                                                    Set<Class<? extends Module>> recursionStack) {
+        if (recursionStack.contains(moduleClass)) {
             return true;
         }
 
@@ -364,18 +358,18 @@ public class Implements {
         }
 
         visited.add(moduleClass);
-        path.add(moduleClass);
+        recursionStack.add(moduleClass);
 
         if (moduleClass.isAnnotationPresent(DependsOn.class)) {
             DependsOn dependsOn = moduleClass.getAnnotation(DependsOn.class);
             for (Class<? extends Module> dependency : dependsOn.value()) {
-                if (detectCircularDependency(dependency, visited, path)) {
+                if (detectCircularDependency(dependency, visited, recursionStack)) {
                     return true;
                 }
             }
         }
 
-        path.removeLast();
+        recursionStack.remove(moduleClass);
         return false;
     }
 

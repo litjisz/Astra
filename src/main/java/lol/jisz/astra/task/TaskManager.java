@@ -65,14 +65,14 @@ public class TaskManager extends AbstractModule {
 
         startResourceMonitoring();
 
-        if (plugin.logger().isDebugMode()) {
+        if (plugin.isDebugMode()) {
             logger.info("Task system initialized with limit of " + maxConcurrentAsyncTasks + " concurrent async tasks");
         }
     }
 
     @Override
     public void disable() {
-        if (plugin.logger().isDebugMode()) {
+        if (plugin.isDebugMode()) {
             logger.info("Disabling task system, cancelling all tasks...");
         }
         cancelAllTasks();
@@ -122,11 +122,11 @@ public class TaskManager extends AbstractModule {
 
         if (!hasPendingDependencies(task)) {
             pendingTasks.add(task);
-            if (plugin.logger().isDebugMode()) {
+            if (plugin.isDebugMode()) {
                 logger.debug("Task " + task.getId() + " scheduled with priority " + priority);
             }
         } else {
-            if (plugin.logger().isDebugMode()) {
+            if (plugin.isDebugMode()) {
                 logger.debug("Task " + task.getId() + " has pending dependencies, not scheduling yet");
             }
         }
@@ -164,7 +164,7 @@ public class TaskManager extends AbstractModule {
             checkDependentTasks(task.getId());
             processNextTasks();
 
-            if (plugin.logger().isDebugMode()) {
+            if (plugin.isDebugMode()) {
                 logger.debug("Task " + task.getId() + " completed successfully");
             }
         });
@@ -247,7 +247,7 @@ public class TaskManager extends AbstractModule {
     private boolean hasPendingDependenciesRecursive(AstraTask task, Set<String> visited) {
         for (String dependencyId : task.getDependencies()) {
             if (visited.contains(dependencyId)) {
-                if (plugin.logger().isDebugMode()) {
+                if (plugin.isDebugMode()) {
                     logger.error("Circular dependency detected involving task " + task.getId() +
                             " and " + dependencyId);
                 }
@@ -310,7 +310,7 @@ public class TaskManager extends AbstractModule {
             while (!pendingTasks.isEmpty() && (currentLoad < serverLoadThreshold)) {
                 AstraTask nextTask = pendingTasks.peek();
                 if (nextTask instanceof AsyncAstraTask && availableAsyncSlots <= 0) {
-                    if (plugin.logger().isDebugMode()) {
+                    if (plugin.isDebugMode()) {
                         logger.debug("Async task limit reached (" + maxConcurrentAsyncTasks + "), waiting...");
                     }
                     break;
@@ -324,7 +324,7 @@ public class TaskManager extends AbstractModule {
                 }
 
                 if (hasPendingDependencies(nextTask)) {
-                    if (plugin.logger().isDebugMode()) {
+                    if (plugin.isDebugMode()) {
                         logger.debug("Task " + nextTask.getId() + " has pending dependencies, returning to queue");
                     }
                     pendingTasks.add(nextTask);
@@ -335,12 +335,12 @@ public class TaskManager extends AbstractModule {
                     runningAsyncTasks.incrementAndGet();
                     availableAsyncSlots--;
                     ((AsyncAstraTask) nextTask).execute();
-                    if (plugin.logger().isDebugMode()) {
+                    if (plugin.isDebugMode()) {
                         logger.debug("Executing async task " + nextTask.getId() + " with priority " + nextTask.getPriority());
                     }
                 } else if (nextTask instanceof SyncAstraTask) {
                     ((SyncAstraTask) nextTask).execute();
-                    if (plugin.logger().isDebugMode()) {
+                    if (plugin.isDebugMode()) {
                         logger.debug("Executing sync task " + nextTask.getId() + " with priority " + nextTask.getPriority());
                     }
                 }
@@ -412,7 +412,7 @@ public class TaskManager extends AbstractModule {
         Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
             double load = getServerLoad();
             if (load > serverLoadThreshold) {
-                if (plugin.logger().isDebugMode()) {
+                if (plugin.isDebugMode()) {
                     logger.debug("High server load: " + String.format("%.2f", load * 100) + "%, limiting tasks");
                 }
             }
@@ -450,7 +450,7 @@ public class TaskManager extends AbstractModule {
         }
 
         if (removed > 0) {
-            if (plugin.logger().isDebugMode()) {
+            if (plugin.isDebugMode()) {
                 logger.debug("Task cleanup: " + removed + " tasks removed from registry");
             }
         }
@@ -473,7 +473,7 @@ public class TaskManager extends AbstractModule {
                 }
             }
             
-            if (plugin.logger().isDebugMode()) {
+            if (plugin.isDebugMode()) {
                 logger.info("All tasks have been cancelled");
             }
         } finally {
@@ -503,12 +503,12 @@ public class TaskManager extends AbstractModule {
         if (task != null) {
             if (task instanceof AsyncAstraTask) {
                 ((AsyncAstraTask) task).execute();
-                if (plugin.logger().isDebugMode()) {
+                if (plugin.isDebugMode()) {
                     logger.debug("Executing async task " + task.getId() + " with priority " + task.getPriority());
                 }
             } else if (task instanceof SyncAstraTask) {
                 ((SyncAstraTask) task).execute();
-                if (plugin.logger().isDebugMode()) {
+                if (plugin.isDebugMode()) {
                     logger.debug("Executing sync task " + task.getId() + " with priority " + task.getPriority());
                 }
             }
@@ -531,12 +531,12 @@ public class TaskManager extends AbstractModule {
         if (task != null) {
             if (task instanceof AsyncAstraTask) {
                 ((AsyncAstraTask) task).execute();
-                if (plugin.logger().isDebugMode()) {
+                if (plugin.isDebugMode()) {
                     logger.debug("Executing async task " + task.getId() + " with priority " + task.getPriority());
                 }
             } else if (task instanceof SyncAstraTask) {
                 ((SyncAstraTask) task).execute();
-                if (plugin.logger().isDebugMode()) {
+                if (plugin.isDebugMode()) {
                     logger.debug("Executing sync task " + task.getId() + " with priority " + task.getPriority());
                 }
             }
