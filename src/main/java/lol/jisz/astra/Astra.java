@@ -205,6 +205,22 @@ public abstract class Astra extends JavaPlugin {
     }
 
     /**
+     * Checks if the logger is in debug mode.
+     * @return true if debug mode is enabled, false otherwise
+     */
+    public boolean isDebugMode() {
+        return logger.isDebugMode();
+    }
+
+    /**
+     * Sets the debug mode for the logger.
+     * @param debug true to enable debug mode, false to disable
+     */
+    public void setDebugMode(boolean debug) {
+        logger.setDebugMode(debug);
+    }
+
+    /**
      * Scans an additional package to register modules and commands
      * @param packageName Name of the package to scan
      */
