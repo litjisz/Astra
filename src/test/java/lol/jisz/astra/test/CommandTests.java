@@ -3,6 +3,7 @@ package lol.jisz.astra.test;
 import lol.jisz.astra.Astra;
 import lol.jisz.astra.command.CommandBase;
 import lol.jisz.astra.command.CommandManager;
+import lol.jisz.astra.command.sender.Sender;
 import lol.jisz.astra.utils.Logger;
 import org.bukkit.command.CommandSender;
 
@@ -77,8 +78,8 @@ public class CommandTests {
         }
         
         @Override
-        public boolean execute(CommandSender sender, String label, String[] args) {
-            sender.sendMessage("Test command executed!");
+        public boolean execute(Sender sender, String label, String[] args) {
+            sender.send("Test command executed!");
             return true;
         }
     }
