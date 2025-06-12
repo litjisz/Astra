@@ -63,13 +63,18 @@ public class ConfigManager {
             try {
                 if (plugin.getResource(name + ".yml") != null) {
                     plugin.saveResource(name + ".yml", false);
-                    logger.info("Configuration file extracted from resources: " + name + ".yml");
+
+                    if (logger.isDebugMode()) {
+                        logger.info("Configuration file extracted from resources: " + name + ".yml");
+                    }
                 } else {
                     if (file.getParentFile() != null) {
                         file.getParentFile().mkdirs();
                     }
                     if (file.createNewFile()) {
-                        logger.info("Configuration file created: " + name + ".yml");
+                        if (logger.isDebugMode()) {
+                            logger.info("Configuration file created: " + name + ".yml");
+                        }
                     }
                 }
             } catch (IOException ex) {
@@ -122,7 +127,10 @@ public class ConfigManager {
 
         try {
             configs.get(name).save(configFiles.get(name));
-            logger.debug("Configuration saved: " + name);
+
+            if (logger.isDebugMode()) {
+                logger.debug("Configuration saved: " + name);
+            }
         } catch (IOException e) {
             logger.error("Error saving configuration: " + name, e);
         }
@@ -150,7 +158,9 @@ public class ConfigManager {
                     file.getParentFile().mkdirs();
                 }
                 if (file.createNewFile()) {
-                    logger.info("Configuration file created: " + name + ".yml");
+                    if (logger.isDebugMode()) {
+                        logger.info("Configuration file created: " + name + ".yml");
+                    }
                 }
             } catch (IOException ex) {
                 logger.error("Could not create the file: " + name + ".yml", ex);
@@ -198,14 +208,20 @@ public class ConfigManager {
         for (String name : configs.keySet()) {
             reloadConfig(name);
         }
-        logger.info("All configurations have been reloaded");
+
+        if (logger.isDebugMode()) {
+            logger.info("All configurations have been reloaded");
+        }
     }
 
     public void saveAllConfigs() {
         for (String name : configs.keySet()) {
             saveConfig(name);
         }
-        logger.info("All configurations have been saved");
+
+        if (logger.isDebugMode()) {
+            logger.info("All configurations have been saved");
+        }
     }
 
     /**

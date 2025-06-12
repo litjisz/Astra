@@ -45,7 +45,10 @@ public class PluginHelper {
             initCommandSystem();
             initTaskSystem();
             loadConfig();
-            logger.info("PluginHelper loaded successfully");
+
+            if (logger.isDebugMode()) {
+                logger.info("PluginHelper loaded successfully");
+            }
 
         } catch (Exception e) {
             logger.error("Error loading the plugin", e);
@@ -61,7 +64,10 @@ public class PluginHelper {
         try {
             Implements.disableAll();
             saveConfig();
-            logger.info("PluginHelper unloaded successfully");
+
+            if (logger.isDebugMode()) {
+                logger.info("PluginHelper unloaded successfully");
+            }
 
         } catch (Exception e) {
             logger.error("Error unloading the plugin", e);
@@ -82,7 +88,10 @@ public class PluginHelper {
             loadConfig();
 
             Implements.enableAll();
-            logger.info("PluginHelper reloaded successfully");
+
+            if (logger.isDebugMode()) {
+                logger.info("PluginHelper reloaded successfully");
+            }
 
         } catch (Exception e) {
             logger.error("Error reloading the plugin", e);
@@ -166,7 +175,9 @@ public class PluginHelper {
                         type.getName()
                 );
 
-                logger.info("Registered database of type: " + type);
+                if (logger.isDebugMode()) {
+                    logger.info("Registered database of type: " + type);
+                }
             } catch (Exception e) {
                 logger.error("Failed to register database of type: " + type, e);
             }

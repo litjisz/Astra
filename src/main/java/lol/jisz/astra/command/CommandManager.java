@@ -77,7 +77,10 @@ public class CommandManager {
                         
                         commandMap.register(plugin.getName().toLowerCase(), pluginCommand);
                         commands.add(command);
-                        logger.info("Registered command: " + command.getName());
+
+                        if (logger.isDebugMode()) {
+                            logger.info("Registered command: " + command.getName());
+                        }
                     } catch (Exception e) {
                         logger.error("Failed to create plugin command for " + command.getName(), e);
                     }
@@ -85,7 +88,10 @@ public class CommandManager {
                     pluginCommand.setExecutor(command);
                     pluginCommand.setTabCompleter(command);
                     commands.add(command);
-                    logger.info("Registered existing command: " + command.getName());
+
+                    if (logger.isDebugMode()) {
+                        logger.info("Registered existing command: " + command.getName());
+                    }
                 }
             } else {
                 logger.error("Cannot register command " + command.getName() + " - CommandMap is null");
@@ -108,7 +114,10 @@ public class CommandManager {
         try {
             command.unregister(commandMap);
             commands.remove(command);
-            logger.info("Unregistered command: " + command.getName());
+
+            if (logger.isDebugMode()) {
+                logger.info("Unregistered command: " + command.getName());
+            }
         } catch (Exception e) {
             logger.error("Error unregistering command: " + command.getName(), e);
         }

@@ -83,6 +83,15 @@ public class Logger {
     }
 
     /**
+     * Checks if debug mode is enabled.
+     *
+     * @return true if debug mode is enabled, false otherwise
+     */
+    public boolean isDebugMode() {
+        return debugMode;
+    }
+
+    /**
      * Gets the current prefix
      *
      * @return Current prefix

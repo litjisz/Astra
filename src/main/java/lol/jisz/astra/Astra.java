@@ -34,7 +34,9 @@ public abstract class Astra extends JavaPlugin {
             if (getResource("config.yml") != null) {
                 saveDefaultConfig();
             } else {
-                logger.warning("config.yml was not found in the JAR. Default configuration loading will be skipped.");
+                if (logger.isDebugMode()) {
+                    getLogger().warning("No config.yml found. Default configuration will not be loaded.");
+                }
             }
 
             initAstra();
@@ -42,13 +44,17 @@ public abstract class Astra extends JavaPlugin {
             if (pluginHelper != null) {
                 pluginHelper.load();
             } else {
-                logger.error("PluginHelper could not be initialized. Some functionalities may not be available.");
+                if (logger.isDebugMode()) {
+                    getLogger().warning("PluginHelper could not be initialized. Plugin will not function correctly.");
+                }
             }
 
             onInitialize();
             initialized = true;
 
-            logger.info("Plugin enabled successfully!");
+            if (logger.isDebugMode()) {
+                logger.info("Plugin initialized successfully!");
+            }
         } catch (Exception e) {
             logger.error("Error enabling the plugin", e);
         }
@@ -62,7 +68,9 @@ public abstract class Astra extends JavaPlugin {
             }
             onShutdown();
 
-            logger.info("Plugin disabled successfully!");
+            if (logger.isDebugMode()) {
+                logger.info("Plugin disabled successfully!");
+            }
         } catch (Exception e) {
             logger.error("Error disabling the plugin", e);
         }
@@ -91,7 +99,9 @@ public abstract class Astra extends JavaPlugin {
             }
             onReload();
 
-            logger.info("Plugin reloaded successfully!");
+            if (logger.isDebugMode()) {
+                logger.info("Plugin reloaded successfully!");
+            }
         } catch (Exception e) {
             logger.error("Error reloading the plugin", e);
         }
