@@ -1,12 +1,15 @@
 package lol.jisz.astra.command;
 
 import lol.jisz.astra.Astra;
+import lol.jisz.astra.command.sender.Sender;
+import lol.jisz.astra.command.sender.SenderCommandExecutor;
+import lol.jisz.astra.command.sender.SenderTabCompleter;
 import org.bukkit.command.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class CommandBase implements CommandExecutor, TabCompleter {
+public abstract class CommandBase implements SenderCommandExecutor, SenderTabCompleter {
 
     private final String name;
     private final String permission;
@@ -70,7 +73,7 @@ public abstract class CommandBase implements CommandExecutor, TabCompleter {
      * @param args Command arguments
      * @return true if the command was executed successfully, false otherwise
      */
-    public abstract boolean execute(CommandSender sender, String label, String[] args);
+    public abstract boolean execute(Sender sender, String label, String[] args);
 
     /**
      * Handles the command execution after checking permissions and player-only restrictions.
@@ -83,14 +86,14 @@ public abstract class CommandBase implements CommandExecutor, TabCompleter {
      * @return true if the command was handled, false otherwise
      */
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (playerOnly && !(sender instanceof org.bukkit.entity.Player)) {
-            sender.sendMessage("§cThis command can only be executed by players.");
+    public boolean onCommand(Sender sender, Command command, String label, String[] args) {
+        if (playerOnly && sender.isConsole()) {
+            sender.send("&cThis command can only be executed by players.");
             return true;
         }
 
         if (permission != null && !permission.isEmpty() && !sender.hasPermission(permission)) {
-            sender.sendMessage("§cYou do not have permission to execute this command.");
+            sender.send("&cYou do not have permission to execute this command.");
             return true;
         }
 
@@ -110,7 +113,7 @@ public abstract class CommandBase implements CommandExecutor, TabCompleter {
      * @return A list of possible tab completions
      */
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(Sender sender, Command command, String alias, String[] args) {
         return new ArrayList<>();
     }
 

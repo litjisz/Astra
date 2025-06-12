@@ -2,11 +2,11 @@ package lol.jisz.astra.command.impl;
 
 import lol.jisz.astra.api.Implements;
 import lol.jisz.astra.command.CommandBase;
+import lol.jisz.astra.command.sender.Sender;
 import lol.jisz.astra.task.TaskManager;
 import lol.jisz.astra.task.TaskPriority;
 import lol.jisz.astra.utils.Text;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,7 +20,7 @@ public class AstraCommand extends CommandBase {
     }
 
     @Override
-    public boolean execute(CommandSender sender, String label, String[] args) {
+    public boolean execute(Sender sender, String label, String[] args) {
         if (args.length == 0) {
             List<String> messages = Arrays.asList(
                     Text.colorize(" "),
@@ -32,14 +32,14 @@ public class AstraCommand extends CommandBase {
                     Text.colorize(" ")
             );
 
-            messages.forEach(sender::sendMessage);
+            messages.forEach(sender::send);
         } else {
             handleSubcommands(sender, args);
         }
         return true;
     }
 
-    private void handleSubcommands(CommandSender sender, String[] args) {
+    private void handleSubcommands(Sender sender, String[] args) {
         if (args.length > 0) {
             String subcommand = args[0].toLowerCase();
             switch (subcommand) {
@@ -50,15 +50,15 @@ public class AstraCommand extends CommandBase {
                     sendTasksMessage(sender);
                     break;
                 default:
-                    sender.sendMessage(Text.colorize("&c ✘ Unknown command: &n" + subcommand));
-                    sender.sendMessage(Text.colorize("&eThe available subcommands are &ngithub&e and &ntasks&e."));
+                    sender.send(Text.colorize("&c ✘ Unknown command: &n" + subcommand));
+                    sender.send(Text.colorize("&eThe available subcommands are &ngithub&e and &ntasks&e."));
             }
         } else {
-            sender.sendMessage(Text.colorize("&cPlease provide a subcommand."));
+            sender.send(Text.colorize("&cPlease provide a subcommand."));
         }
     }
 
-    private void sendGithubMessage(CommandSender sender) {
+    private void sendGithubMessage(Sender sender) {
         List<String> githubMessages = Arrays.asList(
                 Text.colorize(" "),
                 Text.gradient("☽ Astra", "9863E7", "C69FFF") +
@@ -70,10 +70,10 @@ public class AstraCommand extends CommandBase {
                 Text.colorize(" ")
         );
 
-        githubMessages.forEach(sender::sendMessage);
+        githubMessages.forEach(sender::send);
     }
 
-    private void sendTasksMessage(CommandSender sender) {
+    private void sendTasksMessage(Sender sender) {
         Map<String, Object> stats = Implements.fetch(TaskManager.class).getStatistics();
         
         int completedTasks = (int) stats.get("completedTasks");
@@ -105,7 +105,7 @@ public class AstraCommand extends CommandBase {
                 Text.colorize(" ")
         );
 
-        tasksMessages.forEach(sender::sendMessage);
+        tasksMessages.forEach(sender::send);
     }
 
     private int getTaskCountByPriority(Map<TaskPriority, Integer> tasksByPriority, TaskPriority priority) {
@@ -113,7 +113,7 @@ public class AstraCommand extends CommandBase {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(Sender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
