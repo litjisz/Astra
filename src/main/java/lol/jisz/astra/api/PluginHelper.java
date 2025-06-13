@@ -25,6 +25,7 @@ public class PluginHelper {
         this.logger = plugin.logger();
         
         try {
+            Implements.init(plugin);
             this.commandManager = new CommandManager(plugin);
             this.databaseRegistry = new DatabaseRegistry(plugin);
         } catch (Exception e) {
@@ -106,18 +107,31 @@ public class PluginHelper {
      */
     public class PluginRegistrar {
 
-        public PluginRegistrar initModuleSystem() {
+        /**
+         * Scans the specified package for plugin components to register.
+         * This method searches the given package for classes that should be registered
+         * with the plugin system, such as commands, listeners, or other components.
+         * Any errors during scanning are caught and logged.
+         *
+         * @param packageName The fully qualified name of the package to scan
+         * @return This registrar for method chaining
+         */
+        public PluginRegistrar scanPackage(String packageName) {
             try {
-                Implements.init(plugin);
+                plugin.scanPackage(packageName);
                 if (logger.isDebugMode()) {
-                    logger.info("Module system initialized successfully");
+                    logger.info("Scanned package: " + packageName);
                 }
             } catch (Exception e) {
-                logger.error("Failed to initialize module system", e);
+                logger.error("Failed to scan package: " + packageName, e);
             }
             return this;
         }
 
+        /**
+         * Initializes the command system for this plugin.
+         * @return This registrar for method chaining
+         */
         public PluginRegistrar initTaskSystem() {
             try {
                 Implements.register(new TaskManager());
@@ -133,6 +147,8 @@ public class PluginHelper {
         /**
          * Registers a database with the specified type.
          * @param type The type of database to register
+         * @param config The configuration file containing database settings
+         * @param path The path in the configuration file where database settings are located
          * @return This registrar for method chaining
          */
         public PluginRegistrar registerDatabase(DatabaseType type, FileConfiguration config, String path) {
