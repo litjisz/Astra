@@ -3,7 +3,7 @@ package lol.jisz.astra.utils;
 import lol.jisz.astra.Astra;
 import lol.jisz.astra.api.Implements;
 import lol.jisz.astra.api.annotations.AutoRegisterModule;
-import lol.jisz.astra.api.interfaces.Module;
+import lol.jisz.astra.api.module.Module;
 import lol.jisz.astra.command.AutoRegisterCommand;
 import lol.jisz.astra.command.CommandBase;
 import lol.jisz.astra.event.AutoRegisterListener;

@@ -2,9 +2,9 @@ package lol.jisz.astra.api;
 
 import lol.jisz.astra.Astra;
 import lol.jisz.astra.api.annotations.DependsOn;
-import lol.jisz.astra.api.interfaces.Module;
+import lol.jisz.astra.api.module.Module;
 import lol.jisz.astra.api.interfaces.ModuleLifecycleListener;
-import lol.jisz.astra.api.interfaces.PrioritizedModule;
+import lol.jisz.astra.api.module.PrioritizedModule;
 import lol.jisz.astra.api.interfaces.ResourceProvider;
 import lol.jisz.astra.command.CommandManager;
 import lol.jisz.astra.database.registry.DatabaseRegistry;
@@ -24,7 +24,6 @@ public class Implements {
     // TODO: As soon as AstraMap is tested and 100% thread safe it will be implemented here.
     private static final Map<Class<? extends Module>, Module> modules = new ConcurrentHashMap<>();
     private static final List<ModuleLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
-
 
     /**
      * Initializes the module system

@@ -1,7 +1,7 @@
 package lol.jisz.astra.database.registry;
 
 import lol.jisz.astra.Astra;
-import lol.jisz.astra.api.AbstractModule;
+import lol.jisz.astra.api.module.AbstractModule;
 import lol.jisz.astra.database.AstraDatabase;
 import lol.jisz.astra.database.providers.DatabaseType;
 import org.bukkit.configuration.file.FileConfiguration;

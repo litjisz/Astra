@@ -1,5 +1,7 @@
 package lol.jisz.astra.api.interfaces;
 
+import lol.jisz.astra.api.module.Module;
+
 /**
  * Interface for listening to module lifecycle events
  */

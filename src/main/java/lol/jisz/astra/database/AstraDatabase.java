@@ -1,7 +1,7 @@
 package lol.jisz.astra.database;
 
 import lol.jisz.astra.Astra;
-import lol.jisz.astra.api.AbstractModule;
+import lol.jisz.astra.api.module.AbstractModule;
 import lol.jisz.astra.database.annotations.StorageConstructor;
 import lol.jisz.astra.database.annotations.StorageKey;
 import lol.jisz.astra.database.interfaces.DatabaseSerializable;

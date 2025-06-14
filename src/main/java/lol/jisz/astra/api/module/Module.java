@@ -1,4 +1,6 @@
-package lol.jisz.astra.api.interfaces;
+package lol.jisz.astra.api.module;
+
+import lol.jisz.astra.api.Implementer;
 
 /**
  * Represents a module within the Astra system.
@@ -6,7 +8,7 @@ package lol.jisz.astra.api.interfaces;
  * A module is a component that can be enabled, disabled, and reloaded
  * during runtime, allowing for dynamic functionality management.
  */
-public interface Module {
+public interface Module extends Implementer {
     /**
      * Enables this module.
      * <p>

@@ -84,7 +84,7 @@ public class MyPlugin extends Astra {
 ```java
 package com.example.myplugin.modules;
 
-import lol.jisz.astra.api.AbstractModule;
+import lol.jisz.astra.api.module.AbstractModule;
 import lol.jisz.astra.api.annotations.AutoRegisterModule;
 
 @AutoRegisterModule

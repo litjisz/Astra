@@ -1,6 +1,6 @@
 package lol.jisz.astra.api.annotations;
 
-import lol.jisz.astra.api.interfaces.Module;
+import lol.jisz.astra.api.module.Module;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

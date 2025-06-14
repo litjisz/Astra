@@ -1,7 +1,7 @@
 package lol.jisz.astra.task;
 
 import lol.jisz.astra.Astra;
-import lol.jisz.astra.api.AbstractModule;
+import lol.jisz.astra.api.module.AbstractModule;
 import lol.jisz.astra.utils.Logger;
 import lol.jisz.astra.utils.Text;
 import org.bukkit.Bukkit;

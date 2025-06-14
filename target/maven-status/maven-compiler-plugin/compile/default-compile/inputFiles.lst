@@ -4,7 +4,9 @@ C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\command\AutoR
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\command\impl\AstraCommand.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\task\SyncAstraTask.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\registry\DatabaseRegistry.java
+C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\module\AbstractModule.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\annotations\StorageId.java
+C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\module\PrioritizedModule.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\interfaces\StorageObject.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\providers\DatabaseType.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\providers\MongoDBProvider.java
@@ -12,15 +14,14 @@ C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\utils\Title.j
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\task\AstraTask.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\annotations\StorageKey.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\registry\DatabaseFactory.java
-C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\interfaces\PrioritizedModule.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\command\sender\SenderCommandExecutor.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\annotations\StorageField.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\task\TaskPriority.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\Implements.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\command\adapter\TabCompleterAdapter.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\providers\SQLiteProvider.java
-C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\AbstractModule.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\annotations\DependsOn.java
+C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\Implementer.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\command\CommandBase.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\Astra.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\utils\Text.java
@@ -35,7 +36,6 @@ C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\task\AsyncAst
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\command\CommandManager.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\interfaces\ModuleLifecycleListener.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\interfaces\ResourceProvider.java
-C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\interfaces\Module.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\utils\AstraMap.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\interfaces\DatabaseSerializable.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\utils\ConfigManager.java
@@ -45,6 +45,7 @@ C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\annotatio
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\task\TaskManager.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\annotations\StorageIgnore.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\providers\NullDBProvider.java
+C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\api\module\Module.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\utils\AstraList.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\database\annotations\StorageCollection.java
 C:\Users\litji\Documents\GitHub\Astra\src\main\java\lol\jisz\astra\utils\ActionBar.java

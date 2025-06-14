@@ -1,4 +1,4 @@
-package lol.jisz.astra.api.interfaces;
+package lol.jisz.astra.api.module;
 
 /**
  * Interface for modules that have a priority value.
